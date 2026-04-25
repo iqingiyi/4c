@@ -352,26 +352,7 @@
 </div>
 
 <script>
-    let currentData = []; // 💡 新增：用于存放当前从后端获取的真实数据
-
-    function loadList() {
-        let name = document.getElementById('name').value;
-        let risk = document.getElementById('riskLevel').value;
-        let community = document.getElementById('community').value;
-
-        let url = `http://127.0.0.1:8000/api/elders?name=${name}&risk_level=${risk}&community=${community}`;
-
-        fetch(url)
-            .then(response => response.json())
-            .then(result => {
-                if(result.code === 200) {
-                    currentData = result.data; // 💡 关键：把后端传来的真数据存进全局变量
-                    render(currentData);
-                    renderPage(currentData.length);
-                }
-            });
-    }
-    // 折叠菜单（原版）
+   // 折叠菜单
     function toggleSubmenu(el) {
         const sub = el.nextElementSibling;
         const arrow = el.querySelector('.menu-arrow');
@@ -379,45 +360,28 @@
         arrow.classList.toggle('open');
     }
 
-    // 模拟数据
-    let mockData = [
-        {id:1,name:'张爷爷',gender:'男',age:73,idCard:'320501195001011234',phone:'13800138000',community:'幸福里社区',risk:'高风险',disability:'中度失能',createTime:'2024-05-20',address:'幸福里小区3栋2单元',remark:'高血压'},
-        {id:2,name:'李奶奶',gender:'女',age:72,idCard:'320501195102022345',phone:'13900139000',community:'阳光社区',risk:'高风险',disability:'重度失能',createTime:'2024-05-20',address:'阳光小区1栋3单元',remark:'糖尿病'},
-        {id:3,name:'王爷爷',gender:'男',age:80,idCard:'320501194403033456',phone:'13700137000',community:'康乐社区',risk:'中风险',disability:'轻度失能',createTime:'2024-05-20',address:'康乐小区5栋1单元',remark:'心率不齐'},
-        {id:4,name:'刘奶奶',gender:'女',age:76,idCard:'320501194804044567',phone:'13600136000',community:'幸福里社区',risk:'低风险',disability:'完全自理',createTime:'2024-05-20',address:'幸福里小区2栋4单元',remark:'无'},
-        {id:5,name:'赵奶奶',gender:'女',age:68,idCard:'320501195605055678',phone:'13500135000',community:'阳光社区',risk:'正常',disability:'完全自理',createTime:'2024-05-20',address:'阳光小区2栋1单元',remark:'无'},
-    ];
-
+    let currentData = []; // 💡 全局变量：存放从后端拉取到的真数据
     let page = 1;
     let limit = 15;
 
-    // ================= 接入真实后端的 loadList =================
+    // 获取真实数据
     function loadList() {
-        // 1. 获取输入框的搜索条件
         let name = document.getElementById('name').value;
         let risk = document.getElementById('riskLevel').value;
         let community = document.getElementById('community').value;
-
-        // 2. 拼接 API 请求地址（带上搜索参数）
         let url = `http://127.0.0.1:8000/api/elders?name=${name}&risk_level=${risk}&community=${community}`;
 
-        // 3. 向后端发起请求！
         fetch(url)
             .then(response => response.json())
             .then(result => {
                 if(result.code === 200) {
-                    // result.data 就是后端传过来的那 100 个真实老人数据！
-                    render(result.data);
-                    renderPage(result.data.length);
-                    console.log("✅ 真实数据加载成功！共加载", result.data.length, "条记录");
+                    currentData = result.data; // 💡 关键：数据入库，供编辑功能使用
+                    render(currentData);
+                    renderPage(currentData.length);
                 }
-            })
-            .catch(err => {
-                console.error("❌ 请求失败，请检查后端是否运行：", err);
-                alert("无法连接到后端数据库！");
             });
     }
-    // ==========================================================
+
     // 渲染表格
     function render(list) {
         let html = '';
@@ -438,73 +402,10 @@
         document.getElementById('dataBody').innerHTML = html;
     }
 
-    // 保存
-    function saveElder() {
-        let id = document.getElementById('elderId').value;
-        let form = {
-            id: id || Date.now(),
-            name: document.getElementById('formName').value,
-            gender: document.getElementById('formGender').value,
-            age: document.getElementById('formAge').value,
-            idCard: document.getElementById('formIdCard').value,
-            phone: document.getElementById('formPhone').value,
-            community: document.getElementById('formCommunity').value,
-            risk: document.getElementById('formRisk').value,
-            disability: document.getElementById('formDisability').value,
-            address: document.getElementById('formAddress').value,
-            remark: document.getElementById('formRemark').value,
-            createTime: new Date().toLocaleString().substr(0,10)
-        };
-
-        if(id) {
-            let index = mockData.findIndex(x => x.id == id);
-            mockData[index] = form;
-        } else {
-            mockData.unshift(form);
-        }
-        alert('保存成功');
-        closeModal();
-        loadList();
-    }
-
-    // 删除
-    function del(id) {
-        if(!confirm('确定删除？')) return;
-        mockData = mockData.filter(x => x.id != id);
-        alert('删除成功');
-        loadList();
-    }
-
-    // 批量删除
-    function batchDelete() {
-        let ids = Array.from(document.querySelectorAll('.check-item:checked')).map(i => i.value);
-        if(!ids.length) return alert('请选择数据');
-        mockData = mockData.filter(x => !ids.includes(String(x.id)));
-        alert('批量删除成功');
-        loadList();
-    }
-
-    // 导出
-    function doExport() { alert('导出功能需后端支持，前端已完成界面'); }
-    // 导入
-    function doImport() { alert('导入功能需后端支持，前端已完成界面'); closeImportModal(); }
-
-    // 全选
-    function checkAll() {
-        let checkAll = document.getElementById('checkAll').checked;
-        document.querySelectorAll('.check-item').forEach(cb => cb.checked = checkAll);
-    }
-
-    // 弹窗
-    function openAddModal() { document.getElementById('modalTitle').innerText = '新增老人档案'; document.getElementById('elderId').value = ''; document.getElementById('modal').style.display = 'flex'; }
+    // 弹窗编辑
     function edit(id) {
-        // 💡 修改：从当前的真数据 currentData 中查找
-        let d = currentData.find(x => x.id == id); 
-        
-        if(!d) {
-            alert("未找到该老人数据");
-            return;
-        }
+        let d = currentData.find(x => x.id == id);
+        if(!d) { alert("未找到数据"); return; } // 如果没找着才拦截
 
         document.getElementById('modalTitle').innerText = '编辑老人档案';
         document.getElementById('elderId').value = d.id;
@@ -514,21 +415,91 @@
         document.getElementById('formIdCard').value = d.idCard;
         document.getElementById('formPhone').value = d.phone;
         document.getElementById('formCommunity').value = d.community;
-        document.getElementById('formRisk').value = d.risk; // 确保这里是 risk
+        document.getElementById('formRisk').value = d.risk;
         document.getElementById('formDisability').value = d.disability;
         document.getElementById('formAddress').value = d.address;
         document.getElementById('formRemark').value = d.remark;
-        
         document.getElementById('modal').style.display = 'flex';
     }
+
+    // 新增 & 保存
+    function saveElder() {
+        let id = document.getElementById('elderId').value;
+        let data = {
+            name: document.getElementById('formName').value,
+            gender: document.getElementById('formGender').value,
+            age: parseInt(document.getElementById('formAge').value) || 70,
+            idCard: document.getElementById('formIdCard').value,
+            phone: document.getElementById('formPhone').value,
+            community: document.getElementById('formCommunity').value,
+            risk_level: document.getElementById('formRisk').value,
+            disability: document.getElementById('formDisability').value,
+            address: document.getElementById('formAddress').value,
+            remark: document.getElementById('formRemark').value
+        };
+
+        if(!data.name || !data.address) { alert("姓名和家庭住址不能为空！"); return; }
+
+        let url = id ? `http://127.0.0.1:8000/api/elders/${id}` : 'http://127.0.0.1:8000/api/elders';
+        let method = id ? 'PUT' : 'POST';
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(result => {
+            if(result.code === 200) {
+                alert(id ? '🎉 老人档案修改成功！' : '🎉 老人档案录入成功！');
+                closeModal();
+                loadList();
+            }
+        });
+    }
+
+    // 单条删除
+    function del(id) {
+        if(!confirm('🚨 确定要永久删除这位老人的档案吗？')) return;
+        fetch(`http://127.0.0.1:8000/api/elders/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(result => {
+                if(result.code === 200) { alert('✅ 删除成功'); loadList(); }
+            });
+    }
+
+    // 批量删除
+    function batchDelete() {
+        let ids = Array.from(document.querySelectorAll('.check-item:checked')).map(i => parseInt(i.value));
+        if(!ids.length) return alert('请先勾选要删除的数据！');
+        if(!confirm(`🚨 确定要批量删除这 ${ids.length} 条档案吗？`)) return;
+
+        fetch('http://127.0.0.1:8000/api/elders/batch-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ids)
+        })
+        .then(res => res.json())
+        .then(result => {
+            if(result.code === 200) { alert('✅ ' + result.msg); loadList(); }
+        });
+    }
+
+    // 其他辅助功能
+    function doExport() { alert('导出功能需后端支持，前端已完成界面'); }
+    function doImport() { alert('导入功能需后端支持，前端已完成界面'); closeImportModal(); }
+    function checkAll() {
+        let checked = document.getElementById('checkAll').checked;
+        document.querySelectorAll('.check-item').forEach(cb => cb.checked = checked);
+    }
+    function openAddModal() { document.getElementById('modalTitle').innerText = '新增老人档案'; document.getElementById('elderId').value = ''; document.getElementById('modal').style.display = 'flex'; }
     function closeModal() { document.getElementById('modal').style.display = 'none'; }
     function openImportModal() { document.getElementById('importModal').style.display = 'flex'; }
     function closeImportModal() { document.getElementById('importModal').style.display = 'none'; }
-    function resetSearch() { document.getElementById('name').value=''; document.getElementById('idCard').value=''; document.getElementById('riskLevel').value=''; document.getElementById('community').value=''; loadList(); }
+    function resetSearch() { document.getElementById('name').value=''; document.getElementById('riskLevel').value=''; document.getElementById('community').value=''; loadList(); }
 
-    // 分页
     function renderPage(total) {
-        let totalPage = Math.ceil(total/limit);
+        let totalPage = Math.max(1, Math.ceil(total/limit));
         let html = `<span class="page-item" onclick="page=1;loadList();">首页</span>`;
         if(page>1) html += `<span class="page-item" onclick="page--;loadList();">上一页</span>`;
         html += `<span class="page-item active">${page}/${totalPage}</span>`;
@@ -537,12 +508,12 @@
         document.getElementById('pagination').innerHTML = html;
     }
 
-    // 时间
     setInterval(() => {
-        document.getElementById('currentTime').innerText = new Date().toLocaleString('zh-CN');
+        let t = document.getElementById('currentTime');
+        if(t) t.innerText = new Date().toLocaleString('zh-CN');
     }, 1000);
 
-    // 初始化
+    // 页面加载完毕立刻请求数据
     loadList();
 </script>
 </body>

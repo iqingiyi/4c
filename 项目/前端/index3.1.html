@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智护颐年 - 实时健康数据</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
+            background-color: #f6f8fc;
+            color: #333;
+        }
+
+       /* 侧边栏样式（100% 你要的原版） */
+        .sidebar {
+            width: 190px; background: #fff; border-right: 1px solid #e5e7eb; height: 100vh; position: fixed; left: 0; top: 0; padding: 16px 0; overflow-y: auto; z-index: 100;
+        }
+        .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+        .logo-text h1 { font-size: 18px; font-weight: 600; color: #1f2937; }
+        .logo-text p { font-size: 12px; color: #6b7280; }
+        .menu-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #4b5563; text-decoration: none; font-size: 14px; transition: all 0.2s; cursor: pointer;
+        }
+        .menu-item:hover { background: #eff6ff; color: #3b82f6; }
+        .menu-item.active { background: #eff6ff; color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .menu-item .badge { margin-left: auto; background: #ef4444; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 10px; }
+        .submenu { display: none; overflow: hidden; }
+        .submenu-item { display: flex; align-items: center; padding: 10px 20px 10px 36px; color: #6b7280; text-decoration: none; font-size: 13px; transition: 0.2s; }
+        .submenu-item:hover { background: #f9fafb; color: #3b82f6; }
+        .menu-arrow { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+        .menu-arrow.open { transform: rotate(90deg); }
+        .ai-assistant {
+            position: sticky; bottom: 16px; margin: 12px; background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border-radius: 14px; padding: 16px; border: 1px solid #bfdbfe;
+        }
+        .ai-assistant h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; color: #1e40af; }
+        .ai-assistant p { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+        .ai-assistant button {
+            width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 9px;
+            font-size: 12.5px; cursor: pointer; font-weight: 600; transition: 0.2s;
+        }
+
+
+        .main-content {
+            margin-left: 200px;
+            padding: 0;
+        }
+
+        .top-nav {
+            background-color: #fff;
+            border-bottom: 1px solid #eaeef6;
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 32px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #4b5563;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 6px 0;
+        }
+
+        .nav-menu a.active {
+            color: #1677ff;
+            border-bottom: 2px solid #1677ff;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .nav-notification {
+            position: relative;
+            font-size: 18px;
+            color: #6b7280;
+        }
+
+        .nav-notification .badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background-color: #ef4444;
+            color: white;
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 10px;
+        }
+
+        .nav-time {
+            font-size: 14px;
+            color: #4b5563;
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .nav-user img {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background-color: #e5e7eb;
+        }
+
+        .content-container {
+            padding: 28px 32px;
+        }
+
+        .filter-bar {
+            background: white;
+            border-radius: 14px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .filter-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .filter-select {
+            padding: 7px 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #374151;
+        }
+
+        .refresh-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-refresh {
+            background: #1677ff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .tag-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .tag {
+            padding: 6px 12px;
+            border-radius: 14px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .tag.active {
+            transform: scale(1.05);
+            font-weight: 500;
+        }
+
+        .tag.all {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .tag.normal {
+            background: #ecfdf5;
+            color: #36d399;
+        }
+
+        .tag.warn {
+            background: #fffbeb;
+            color: #f59e0b;
+        }
+
+        .tag.danger {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 18px;
+            margin-bottom: 26px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-title {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .stat-trend {
+            font-size: 12px;
+        }
+
+        .stat-trend.up {
+            color: #36d399;
+        }
+
+        .stat-trend.down {
+            color: #ef4444;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 26px;
+        }
+
+        .elder-card {
+            background: white;
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            position: relative;
+            transition: all 0.25s ease;
+        }
+
+        .elder-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.07);
+        }
+
+        .elder-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #dbeafe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            color: #1677ff;
+        }
+
+        .name {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .info {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 3px;
+        }
+
+        .status-tag {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .status-normal {
+            background: #ecfdf5;
+            color: #36d399;
+        }
+
+        .status-warn {
+            background: #fffbeb;
+            color: #f59e0b;
+            animation: blink 1.2s infinite alternate;
+        }
+
+        .status-danger {
+            background: #fef2f2;
+            color: #ef4444;
+            animation: blink 0.8s infinite alternate;
+        }
+
+        @keyframes blink {
+            from { opacity: 1; }
+            to { opacity: 0.65; }
+        }
+
+        .vitals {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .vital-item {
+            padding: 10px;
+            border-radius: 8px;
+            background: #f9fafb;
+            text-align: center;
+        }
+
+        .vital-label {
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .vital-val {
+            font-size: 17px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .val-normal { color: #36d399; }
+        .val-warn { color: #f59e0b; }
+        .val-danger { color: #ef4444; }
+
+        .update-time {
+            font-size: 10px;
+            color: #9ca3af;
+            margin-top: 3px;
+        }
+
+        .mini-chart {
+            height: 60px;
+            margin-bottom: 14px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .card-btn {
+            flex: 1;
+            padding: 7px 0;
+            border-radius: 7px;
+            border: none;
+            font-size: 11px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .card-btn:hover { opacity: 0.8; }
+        .btn-detail { background: #eff6ff; color: #1677ff; }
+        .btn-call { background: #fffbeb; color: #f59e0b; }
+        .btn-record { background: #ecfdf5; color: #36d399; }
+
+        .device-alert-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .device-card {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: 0.2s;
+        }
+
+        .device-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+
+        .device-card-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .device-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 12px;
+        }
+
+        .device-label {
+            color: #6b7280;
+        }
+
+        .device-value {
+            font-weight: 500;
+        }
+
+        .device-online { color: #36d399; }
+        .device-offline { color: #ef4444; }
+        .device-low { color: #f59e0b; }
+        .device-signal { color: #1677ff; }
+
+        .alert-card {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .alert-card-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-count {
+            background: #ef4444;
+            color: white;
+            font-size: 12px;
+            padding: 3px 9px;
+            border-radius: 12px;
+        }
+
+        .alert-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .alert-item {
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            border-left: 4px solid;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            border-color: #ef4444;
+        }
+
+        .alert-warn {
+            background: #fffbeb;
+            border-color: #f59e0b;
+        }
+
+        .alert-text { margin-bottom: 4px; }
+        .alert-time { font-size: 10px; color: #9ca3af; }
+
+        @media (max-width:1300px) {
+            .card-grid { grid-template-columns: repeat(2, 1fr); }
+            .device-alert-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width:992px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .card-grid { grid-template-columns: 1fr; }
+            .device-alert-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- 侧边栏（100% 你要的原版，完整菜单） -->
+<div class="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-cloud"></i></div>
+        <div class="logo-text"><h1>智护颐年</h1><p>智慧养老服务资源调度平台</p></div>
+    </div>
+
+    <div class="menu">
+        <!-- 首页 -->
+        <a href="#" class="menu-item">
+            <i class="fa fa-home"></i><span>首页总览</span>
+        </a>
+
+        <!-- 老人综合管理 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="index2.1.html" class="submenu-item">老人档案管理</a>
+            <a href="index2.2.html" class="submenu-item">失能等级评估</a>
+            <a href="index2.3.html" class="submenu-item">特殊老人管理</a>
+            <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
+            <a href="index2.5.html" class="submenu-item">老人台账统计</a>
+        </div>
+
+        <!-- 健康监测管理 -->
+        <div class="menu-item active" onclick="toggleSubmenu(this)">
+            <i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow open"></i>
+        </div>
+        <div class="submenu" style="display:block;">
+            <a href="#" class="submenu-item active">实时健康数据</a>
+            <a href="#" class="submenu-item">慢病专项管理</a>
+            <a href="#" class="submenu-item">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item">健康趋势分析</a>
+        </div>
+
+        <!-- 安全风险预警 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时告警中心</a>
+            <a href="#" class="submenu-item">跌倒/离床预警</a>
+            <a href="#" class="submenu-item">电子围栏管控</a>
+            <a href="#" class="submenu-item">居家安防预警</a>
+            <a href="#" class="submenu-item">预警处置闭环</a>
+        </div>
+
+        <!-- 服务资源调度 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">工单智能派单</a>
+            <a href="#" class="submenu-item">上门服务管理</a>
+            <a href="#" class="submenu-item">照护计划定制</a>
+            <a href="#" class="submenu-item">服务评价管理</a>
+            <a href="#" class="submenu-item">服务时长监管</a>
+        </div>
+
+        <!-- 人员队伍管理 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">护理人员档案</a>
+            <a href="#" class="submenu-item">排班考勤管理</a>
+            <a href="#" class="submenu-item">资质证书管理</a>
+            <a href="#" class="submenu-item">绩效考核管理</a>
+            <a href="#" class="submenu-item">培训学习管理</a>
+        </div>
+
+        <!-- 智能设备物联 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">设备统一接入</a>
+            <a href="#" class="submenu-item">穿戴设备监控</a>
+            <a href="#" class="submenu-item">居家智能硬件</a>
+            <a href="#" class="submenu-item">设备故障报修</a>
+            <a href="#" class="submenu-item">设备数据统计</a>
+        </div>
+
+        <!-- AI智慧养老 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">AI健康研判</a>
+            <a href="#" class="submenu-item">AI智能派单</a>
+            <a href="#" class="submenu-item">反诈智能防护</a>
+            <a href="#" class="submenu-item">情绪AI识别</a>
+            <a href="#" class="submenu-item">智能营养配餐</a>
+        </div>
+
+        <!-- 补贴财务中心 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">高龄补贴审核</a>
+            <a href="#" class="submenu-item">护理补贴发放</a>
+            <a href="#" class="submenu-item">服务费用管理</a>
+            <a href="#" class="submenu-item">财务对账报表</a>
+        </div>
+
+        <!-- 关怀活动管理 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-heart"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">上门探访记录</a>
+            <a href="#" class="submenu-item">心理慰藉服务</a>
+            <a href="#" class="submenu-item">社区活动管理</a>
+            <a href="#" class="submenu-item">节日慰问关怀</a>
+        </div>
+
+        <!-- 数据分析大屏 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">全域养老看板</a>
+            <a href="#" class="submenu-item">人口结构分析</a>
+            <a href="#" class="submenu-item">风险分布统计</a>
+            <a href="#" class="submenu-item">民政上报报表</a>
+        </div>
+
+        <!-- 消息通知中心 -->
+        <a href="#" class="menu-item">
+            <i class="fa fa-envelope"></i><span>消息通知中心</span><span class="badge">8</span>
+        </a>
+
+        <!-- 系统权限管理 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">区域组织管理</a>
+            <a href="#" class="submenu-item">账号角色管理</a>
+            <a href="#" class="submenu-item">菜单权限配置</a>
+            <a href="#" class="submenu-item">系统字典配置</a>
+            <a href="#" class="submenu-item">操作日志查询</a>
+            <a href="#" class="submenu-item">数据备份恢复</a>
+        </div>
+    </div>
+
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3>
+        <p>为您提供智能决策建议</p>
+        <button>立即咨询</button>
+        <i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i>
+    </div>
+</div>
+
+<!-- 主内容区 -->
+<div class="main-content">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button style="background:none; border:none; font-size:18px;"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="#" class="active">实时健康数据</a>
+                <a href="#">慢病专项管理</a>
+                <a href="#">用药管理中心</a>
+                <a href="#">体检档案记录</a>
+                <a href="#">健康趋势分析</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">12</span></div>
+            <div class="nav-time" id="currentTime"></div>
+            <div class="nav-weather"><i class="fa fa-sun-o"></i><span>26℃ 多云</span></div>
+            <div class="nav-user"><img src=""/><span>管理员 <i class="fa fa-angle-down"></i></span></div>
+        </div>
+    </div>
+
+
+    <div class="content-container">
+        <div class="filter-bar">
+            <div class="filter-left">
+                <select class="filter-select" id="filterStatus">
+                    <option value="all">全部老人</option>
+                    <option value="normal">正常状态</option>
+                    <option value="warn">预警状态</option>
+                    <option value="danger">紧急异常</option>
+                </select>
+
+                <!-- 区域下拉框 -->
+                <select class="filter-select" id="filterArea">
+                    <option value="all">全部区域</option>
+                    <option value="阳光小区">阳光小区</option>
+                    <option value="幸福小区">幸福小区</option>
+                    <option value="康乐小区">康乐小区</option>
+                    <option value="祥和小区">祥和小区</option>
+                    <option value="安泰小区">安泰小区</option>
+                </select>
+
+                <!-- 设备类型下拉框 -->
+                <select class="filter-select" id="filterDevice">
+                    <option value="all">全部设备</option>
+                    <option value="智能手环">智能手环</option>
+                    <option value="电子血压计">电子血压计</option>
+                    <option value="床垫传感器">床垫传感器</option>
+                    <option value="智能手表">智能手表</option>
+                    <option value="体温监测仪">体温监测仪</option>
+                </select>
+
+                <!-- 时间范围下拉框 -->
+                <select class="filter-select" id="filterTime">
+                    <option value="realtime">实时数据</option>
+                    <option value="1h">近1小时</option>
+                    <option value="6h">近6小时</option>
+                    <option value="12h">近12小时</option>
+                    <option value="24h">近24小时</option>
+                    <option value="7d">近7天</option>
+                </select>
+            </div>
+            <div class="filter-left">
+                <button class="btn-refresh" id="refresh"><i class="fa fa-refresh"></i> 搜索筛选</button>
+                <div class="tag-group">
+                    <div class="tag all active" data-type="all">全部</div>
+                    <div class="tag normal" data-type="normal">正常</div>
+                    <div class="tag warn" data-type="warn">预警</div>
+                    <div class="tag danger" data-type="danger">异常</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">在线老人</div>
+                <div class="stat-value" id="onlineCount">0</div>
+                <div class="stat-trend up" id="onlineTrend">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">异常老人</div>
+                <div class="stat-value" style="color:#ef4444" id="dangerCount">0</div>
+                <div class="stat-trend down" id="dangerTrend">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">平均心率</div>
+                <div class="stat-value" style="color:#1677ff" id="avgHeart">0</div>
+                <div class="stat-trend">次/分</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">今日预警</div>
+                <div class="stat-value" style="color:#f59e0b" id="todayWarn">0</div>
+                <div class="stat-trend up" id="warnTrend">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">设备在线率</div>
+                <div class="stat-value" style="color:#36d399" id="deviceRate">0%</div>
+            </div>
+        </div>
+
+        <div class="card-grid" id="cardContainer"></div>
+
+        <div class="device-alert-grid">
+            <div class="device-card" id="device1"></div>
+            <div class="device-card" id="device2"></div>
+            <div class="device-card" id="device3"></div>
+            <div class="device-card" id="device4"></div>
+            <div class="device-card" id="device5"></div>
+            <div class="alert-card">
+                <div class="alert-card-title">⚠️ 实时预警中心 <span class="alert-count" id="alertCount">0</span></div>
+                <div class="alert-list" id="alertList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentFilter = "all";
+    let elderList = [];
+    let deviceList = [];
+
+    function toggleSubmenu(el) {
+        const sub = el.nextElementSibling;
+        const arr = el.querySelector('.menu-arrow');
+        sub.style.display = sub.style.display == 'block' ? 'none' : 'block';
+        arr.classList.toggle('open');
+    }
+
+    function updateTime() {
+        document.getElementById('currentTime').innerText = new Date().toLocaleString();
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // ============= 核心：所有筛选条件提交给后端 =============
+    async function loadDataFromDB() {
+        try {
+            // 收集所有筛选参数
+            const params = {
+                status: document.getElementById("filterStatus").value,
+                area: document.getElementById("filterArea").value,
+                device: document.getElementById("filterDevice").value,
+                timeRange: document.getElementById("filterTime").value,
+                tagStatus: currentFilter
+            };
+
+            // ========== 向后端请求数据（替换成你的接口） ==========
+            // const res = await fetch("/api/health/realtime?" + new URLSearchParams(params), {
+            //     method: "GET",
+            //     headers: { "Content-Type": "application/json" }
+            // }).then(res => res.json());
+            // elderList = res.data || [];
+            // deviceList = res.devices || [];
+
+            // 演示模拟数据（上线可删除）
+            elderList = [
+                {id:1,name:'王奶奶',age:79,gender:'女',room:'阳光小区1栋3单元501',nurse:'张护士(在岗)',status:'normal',heart:72,bp:'126/78',spo2:97,temp:36.6,time:'刚刚'},
+                {id:2,name:'刘爷爷',age:81,gender:'男',room:'阳光小区2栋1单元302',nurse:'李护士(在岗)',status:'warn',heart:104,bp:'148/94',spo2:93,temp:36.9,time:'30秒前'},
+                {id:3,name:'张爷爷',age:73,gender:'男',room:'幸福小区3栋2单元405',nurse:'王护士(离线)',status:'danger',heart:136,bp:'172/108',spo2:86,temp:38.2,time:'刚刚'},
+                {id:4,name:'陈奶奶',age:75,gender:'女',room:'康乐小区1栋501',nurse:'赵护士(在岗)',status:'normal',heart:68,bp:'119/75',spo2:98,temp:36.5,time:'1分钟前'},
+                {id:5,name:'周爷爷',age:84,gender:'男',room:'阳光小区3栋201',nurse:'张护士(在岗)',status:'warn',heart:102,bp:'145/92',spo2:94,temp:37.1,time:'刚刚'},
+                {id:6,name:'吴奶奶',age:71,gender:'女',room:'幸福小区1栋402',nurse:'李护士(在岗)',status:'normal',heart:75,bp:'124/79',spo2:96,temp:36.7,time:'30秒前'}
+            ];
+            deviceList = [
+                {name:"王奶奶",device:"智能手环",code:"DEV-BAND-001",status:"在线",signal:"强",power:"86%",loc:"室内精准",runtime:"16天"},
+                {name:"刘爷爷",device:"电子血压计",code:"DEV-BP-002",status:"低电量",signal:"中",power:"18%",loc:"室内",runtime:"8天"},
+                {name:"张爷爷",device:"床垫传感器",code:"DEV-BED-003",status:"离线",signal:"无信号",power:"未知",loc:"离线",runtime:"32分钟"},
+                {name:"陈奶奶",device:"智能手环",code:"DEV-BAND-004",status:"在线",signal:"强",power:"79%",loc:"室内",runtime:"21天"},
+                {name:"周爷爷",device:"智能手环",code:"DEV-BAND-005",status:"在线",signal:"中",power:"62%",loc:"室内",runtime:"12天"},
+            ];
+        } catch (err) {
+            console.error("请求后端接口失败", err);
+            elderList = [];
+            deviceList = [];
+        }
+    }
+
+    // 前端只渲染，不做本地过滤
+    function getFilteredData() {
+        return elderList;
+    }
+
+    // 渲染卡片
+    function renderCards() {
+        const container = document.getElementById('cardContainer');
+        container.innerHTML = '';
+        const data = getFilteredData();
+        data.forEach(e => {
+            let hColor = e.heart > 120 ? 'danger' : e.heart > 100 ? 'warn' : 'normal';
+            let sColor = e.spo2 < 90 ? 'danger' : e.spo2 < 95 ? 'warn' : 'normal';
+            let tColor = e.temp > 37.5 ? 'danger' : e.temp > 37.2 ? 'warn' : 'normal';
+            container.innerHTML += `
+            <div class="elder-card">
+                <div class="status-tag status-${e.status}">${e.status=='normal'?'正常':e.status=='warn'?'预警':'紧急异常'}</div>
+                <div class="elder-header">
+                    <div class="avatar">${e.name[0]}</div>
+                    <div>
+                        <div class="name">${e.name} ${e.age}岁 ${e.gender}</div>
+                        <div class="info">${e.room} | ${e.nurse}</div>
+                    </div>
+                </div>
+                <div class="vitals">
+                    <div class="vital-item"><div class="vital-label">心率</div><div class="vital-val val-${hColor}">${e.heart}</div><div class="update-time">${e.time}</div></div>
+                    <div class="vital-item"><div class="vital-label">血压</div><div class="vital-val val-${e.status}">${e.bp}</div><div class="update-time">${e.time}</div></div>
+                    <div class="vital-item"><div class="vital-label">血氧</div><div class="vital-val val-${sColor}">${e.spo2}%</div><div class="update-time">${e.time}</div></div>
+                    <div class="vital-item"><div class="vital-label">体温</div><div class="vital-val val-${tColor}">${e.temp}°</div><div class="update-time">${e.time}</div></div>
+                </div>
+                <div class="mini-chart"><canvas id="chart${e.id}"></canvas></div>
+                <div class="card-actions">
+                    <button class="card-btn btn-detail">查看详情</button>
+                    <button class="card-btn btn-call">一键呼叫</button>
+                    <button class="card-btn btn-record">记录干预</button>
+                </div>
+            </div>`;
+        });
+        renderCharts();
+    }
+
+    // 渲染图表
+    function renderCharts() {
+        getFilteredData().forEach(e => {
+            const ctx = document.getElementById(`chart${e.id}`)?.getContext('2d');
+            if(!ctx) return;
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['6h','12h','18h','24h'],
+                    datasets: [{
+                        data: [70,75,e.heart,80],
+                        borderColor: e.status=='danger'?'#ef4444':e.status=='warn'?'#f59e0b':'#36d399',
+                        backgroundColor: 'transparent',
+                        tension: 0.4, borderWidth:2, pointRadius:2
+                    }]
+                },
+                options: {
+                    responsive:true,maintainAspectRatio:false,plugins:{legend:false},
+                    scales:{x:{display:false},y:{display:false}}
+                }
+            });
+        });
+    }
+
+    // 渲染设备
+    function renderDevices() {
+        deviceList.forEach((d,i)=>{
+            const el = document.getElementById(`device${i+1}`);
+            if(!el) return;
+            const st = d.status === "在线" ? "device-online" : d.status === "低电量" ? "device-low" : "device-offline";
+            el.innerHTML = `
+            <div class="device-card-title"><i class="fa fa-watch" style="color:#1677ff"></i> ${d.name} - ${d.device}</div>
+            <div class="device-info-row"><span class="device-label">设备编号</span><span class="device-value">${d.code}</span></div>
+            <div class="device-info-row"><span class="device-label">运行状态</span><span class="device-value ${st}">${d.status}</span></div>
+            <div class="device-info-row"><span class="device-label">信号强度</span><span class="device-value device-signal">${d.signal}</span></div>
+            <div class="device-info-row"><span class="device-label">电量</span><span class="device-value ${st}">${d.power}</span></div>
+            <div class="device-info-row"><span class="device-label">定位</span><span class="device-value">${d.loc}</span></div>
+            <div class="device-info-row"><span class="device-label">运行时长</span><span class="device-value">${d.runtime}</span></div>`;
+        });
+    }
+
+    // 渲染预警
+    function renderAlerts() {
+        const list = document.getElementById('alertList');
+        const count = document.getElementById('alertCount');
+        list.innerHTML = '';
+        let num = 0;
+        getFilteredData().forEach(e => {
+            if(e.status === 'danger' || e.status === 'warn'){
+                num++;
+                list.innerHTML += `
+                <div class="alert-item ${e.status=='danger'?'alert-danger':'alert-warn'}">
+                    <div class="alert-text">${e.name}：${e.status=='danger'?'紧急异常':'指标预警'}</div>
+                    <div class="alert-time">${new Date().toLocaleTimeString()}</div>
+                </div>`;
+            }
+        });
+        count.innerText = num;
+    }
+
+    // 渲染统计
+    function renderStats() {
+        const data = getFilteredData();
+        const online = data.length;
+        const danger = data.filter(e=>e.status==='danger').length;
+        const heart = data.length ? (data.reduce((s,e)=>s+e.heart,0)/data.length).toFixed(0) : 0;
+        const warn = data.filter(e=>e.status==='warn').length;
+
+        document.getElementById('onlineCount').innerText = online;
+        document.getElementById('dangerCount').innerText = danger;
+        document.getElementById('avgHeart').innerText = heart;
+        document.getElementById('todayWarn').innerText = warn;
+        document.getElementById('deviceRate').innerText = "96.8%";
+    }
+
+    // 筛选标签点击
+    document.querySelectorAll('.tag').forEach(t=>{
+        t.onclick = ()=>{
+            document.querySelectorAll('.tag').forEach(x=>x.classList.remove('active'));
+            t.classList.add('active');
+            currentFilter = t.dataset.type;
+            refreshAll();
+        }
+    });
+
+    // 刷新：所有筛选条件提交后端
+    async function refreshAll() {
+        await loadDataFromDB();
+        renderCards();
+        renderDevices();
+        renderAlerts();
+        renderStats();
+    }
+
+    document.getElementById('refresh').onclick = refreshAll;
+
+    // 初始化
+    (async ()=>{
+        await refreshAll();
+        setInterval(refreshAll,10000);
+    })();
+</script>
+</body>
+</html>

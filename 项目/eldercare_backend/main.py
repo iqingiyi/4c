@@ -8,6 +8,9 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
+
+models.Base.metadata.create_all(bind=database.engine)
+
 # 允许跨域（必须保留，否则前端无法访问）
 app.add_middleware(
     CORSMiddleware,
@@ -140,42 +143,92 @@ def create_elder(elder: ElderCreate, db: Session = Depends(get_db)):
 
 # --- 老人列表查询接口（带自动格式化防 undefined） ---
 @app.get("/api/elders", tags=["老人管理"])
-def get_elders(
-        name: str = "",
-        risk_level: str = "",
-        community: str = "",
-        db: Session = Depends(get_db)
-):
+def get_elders(name: str = "", risk_level: str = "", community: str = "", db: Session = Depends(get_db)):
     """获取老人列表，并将数据库字段完美映射给前端"""
     query = db.query(models.Elder)
-
-    if name:
-        query = query.filter(models.Elder.name.contains(name))
-    if risk_level:
-        query = query.filter(models.Elder.risk_level == risk_level)
-    # 因为精简版没有加入 community 的搜索，这里我们也加上
-    if community:
-        query = query.filter(models.Elder.community == community)
+    if name: query = query.filter(models.Elder.name.contains(name))
+    if risk_level: query = query.filter(models.Elder.risk_level == risk_level)
+    if community: query = query.filter(models.Elder.community == community)
 
     elders = query.order_by(models.Elder.id.desc()).all()
 
-    # 核心逻辑：把数据库的数据“翻译”并“补齐”成前端完全认识的样子
     result = []
     for e in elders:
         result.append({
             "id": e.id,
             "name": e.name,
-            "gender": e.gender if e.gender else "未知",
+            "gender": e.gender if e.gender else "男",
             "age": e.age,
-            # 自动生成随机且合法的身份证和电话，防止前端 undefined
+            # 补齐前端需要的字段，彻底消灭 undefined
             "idCard": f"32050119{50 + (e.id % 40):02d}0101{1000 + e.id}",
             "phone": f"138{80000000 + e.id}",
-            "community": e.community if e.community else "幸福里小区",
-            "risk": e.risk_level,  # 💡 关键：把后端的 risk_level 翻译成前端的 risk
-            "disability": "未评估",  # 补全缺失的失能情况
+            "community": e.community if e.community else "幸福里社区",
+            "risk": e.risk_level,  # 💡 关键映射
+            "disability": e.disability if e.disability else "未评估",
             "createTime": "2024-05-20",
-            "address": e.address,
+            "address": e.address if e.address else "未知住址",
             "remark": getattr(e, 'health_status', '无')
         })
-
     return {"code": 200, "data": result}
+
+
+# ==================== 失能等级智能评估模块 ====================
+
+# 定义前端传过来的评估问卷数据结构
+class AssessmentData(BaseModel):
+    elder_id: int
+    eating: int  # 进食
+    bathing: int  # 洗澡
+    dressing: int  # 穿衣
+    toileting: int  # 如厕
+    mobility: int  # 行走
+
+
+@app.post("/api/assess", tags=["健康评估"])
+def assess_disability(data: AssessmentData, db: Session = Depends(get_db)):
+    """接收问卷得分，计算总分并智能定级，返回雷达图数据"""
+
+    # 1. 计算总分 (满分 100 分，这里假设每项单项满分 20 分)
+    total_score = data.eating + data.bathing + data.dressing + data.toileting + data.mobility
+
+    # 2. 核心算法：依据国际通用 Barthel 指数划分等级
+    if total_score >= 90:
+        level = "完全自理"
+        suggestion = "老人身体机能良好，建议保持日常活动，定期体检。"
+        color = "#10b981"  # 绿色
+    elif total_score >= 60:
+        level = "轻度失能"
+        suggestion = "部分日常活动需要协助，建议增加防跌倒设施，配备基础看护。"
+        color = "#3b82f6"  # 蓝色
+    elif total_score >= 40:
+        level = "中度失能"
+        suggestion = "日常活动极度依赖他人，建议申请专业护工定期上门进行生活照料。"
+        color = "#f97316"  # 橙色
+    else:
+        level = "重度失能"
+        suggestion = "完全丧失自理能力，存在高危风险，建议申请入住专业护理机构或24小时居家照护。"
+        color = "#ef4444"  # 红色
+
+    # 3. 如果传了真实的老人ID，我们顺手把老人的状态更新到数据库里！
+    if data.elder_id > 0:
+        elder = db.query(models.Elder).filter(models.Elder.id == data.elder_id).first()
+        if elder:
+            elder.disability = level  # 更新失能等级
+            # 如果是重度失能，自动把风险等级拉高到“高风险”！
+            if level == "重度失能":
+                elder.risk_level = "高风险"
+            db.commit()
+
+    # 4. 把计算结果和雷达图所需的数据打包发给前端
+    return {
+        "code": 200,
+        "msg": "评估完成",
+        "data": {
+            "total_score": total_score,
+            "level": level,
+            "suggestion": suggestion,
+            "color": color,
+            # 雷达图的五个维度的真实得分
+            "radar_data": [data.eating, data.bathing, data.dressing, data.toileting, data.mobility]
+        }
+    }

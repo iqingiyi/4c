@@ -14,6 +14,7 @@ class Elder(Base):
     address = Column(String(255))       # 详细地址
     latitude = Column(Float)            # 纬度 (用于前端地图)
     longitude = Column(Float)           # 经度 (用于前端地图)
+    disability = Column(String(20), default="未评估")
 
 class Caregiver(Base):
     """护理人员表"""
