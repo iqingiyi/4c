@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>失能等级评估 - 智护颐年智慧养老平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; color: #333; }
+
+        /* 侧边栏（和你原版完全一致） */
+        .sidebar {
+            width: 190px; background: #fff; border-right: 1px solid #e5e7eb; height: 100vh; position: fixed; left: 0; top: 0; padding: 16px 0; overflow-y: auto; z-index: 100;
+        }
+        .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+        .logo-text h1 { font-size: 18px; font-weight: 600; color: #1f2937; }
+        .logo-text p { font-size: 12px; color: #6b7280; }
+        .menu-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #4b5563; text-decoration: none; font-size: 14px; transition: all 0.2s; cursor: pointer;
+        }
+        .menu-item:hover { background: #eff6ff; color: #3b82f6; }
+        .menu-item.active { background: #eff6ff; color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .menu-item .badge { margin-left: auto; background: #ef4444; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 10px; }
+        .submenu { display: none; overflow: hidden; }
+        .submenu-item { display: flex; align-items: center; padding: 10px 20px 10px 36px; color: #6b7280; text-decoration: none; font-size: 13px; transition: 0.2s; }
+        .submenu-item:hover { background: #f9fafb; color: #3b82f6; }
+        .menu-arrow { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+        .menu-arrow.open { transform: rotate(90deg); }
+        .ai-assistant {
+            position: sticky; bottom: 16px; margin: 12px; background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border-radius: 14px; padding: 16px; border: 1px solid #bfdbfe;
+        }
+        .ai-assistant h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; color: #1e40af; }
+        .ai-assistant p { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+        .ai-assistant button {
+            width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 9px;
+            font-size: 12.5px; cursor: pointer; font-weight: 600; transition: 0.2s;
+        }
+
+        /* 主内容 */
+        .main-content { margin-left: 190px; }
+        .top-nav {
+            background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .nav-menu { display: flex; gap: 32px; }
+        .nav-menu a { text-decoration: none; color: #4b5563; font-size: 14px; font-weight: 500; padding: 6px 0; }
+        .nav-menu a.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
+        .nav-right { display: flex; align-items: center; gap: 24px; }
+        .nav-notification { position: relative; font-size: 18px; color: #6b7280; }
+        .nav-notification .badge { position: absolute; top: -6px; right: -6px; background: #ef4444; color: #fff; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
+        .nav-time { font-size: 14px; color: #4b5563; }
+        .nav-weather { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #4b5563; }
+        .nav-user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .nav-user img { width: 32px; height: 32px; border-radius: 50%; background: #e5e7eb; }
+        .content-container { padding: 20px 24px; }
+        .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th { padding: 12px 10px; text-align: left; font-size: 13px; color: #6b7280; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+        .table td { padding: 12px 10px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .table tr:hover { background: #f9fafb; }
+        .tag { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight:500; color: #fff; }
+        .tag-normal { background: #10b981; }
+        .tag-mild { background: #3b82f6; }
+        .tag-middle { background: #f97316; }
+        .tag-heavy { background: #ef4444; }
+        .btn { padding: 7px 14px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-default { background: #f3f4f6; color: #4b5563; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .form-input { width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-body { width: 860px; background: #fff; border-radius: 12px; padding: 24px; max-height: 85vh; overflow-y: auto; }
+        .form-row { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap:wrap; }
+        .form-item { flex: 1; min-width:200px; }
+        .form-item label { display: block; font-size: 13px; color: #6b7280; margin-bottom: 4px; font-weight:500; }
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+        .page-item { padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .page-item.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+        .score-box { padding:10px 14px; background:#f8fafc; border-radius:8px; font-weight:bold; color:#1e293b; }
+    </style>
+</head>
+<body>
+
+<!-- 侧边栏（100% 你要的原版，完整菜单） -->
+<div class="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-cloud"></i></div>
+        <div class="logo-text"><h1>智护颐年</h1><p>智慧养老服务资源调度平台</p></div>
+    </div>
+
+    <div class="menu">
+        <!-- 首页 -->
+        <a href="#" class="menu-item">
+            <i class="fa fa-home"></i><span>首页总览</span>
+        </a>
+
+        <!-- 老人综合管理 -->
+        <div class="menu-item active" onclick="toggleSubmenu(this)">
+            <i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow open"></i>
+        </div>
+        <div class="submenu" style="display:block;">
+            <a href="index2.1.html" class="submenu-item active">老人档案管理</a>
+            <a href="index2.2.html" class="submenu-item">失能等级评估</a>
+            <a href="index2.3.html" class="submenu-item">特殊老人管理</a>
+            <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
+            <a href="index2.5.html" class="submenu-item">老人台账统计</a>
+        </div>
+
+        <!-- 健康监测管理 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时健康数据</a>
+            <a href="#" class="submenu-item">慢病专项管理</a>
+            <a href="#" class="submenu-item">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item">健康趋势分析</a>
+        </div>
+
+        <!-- 安全风险预警 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时告警中心</a>
+            <a href="#" class="submenu-item">跌倒/离床预警</a>
+            <a href="#" class="submenu-item">电子围栏管控</a>
+            <a href="#" class="submenu-item">居家安防预警</a>
+            <a href="#" class="submenu-item">预警处置闭环</a>
+        </div>
+
+        <!-- 服务资源调度 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">工单智能派单</a>
+            <a href="#" class="submenu-item">上门服务管理</a>
+            <a href="#" class="submenu-item">照护计划定制</a>
+            <a href="#" class="submenu-item">服务评价管理</a>
+            <a href="#" class="submenu-item">服务时长监管</a>
+        </div>
+
+        <!-- 人员队伍管理 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">护理人员档案</a>
+            <a href="#" class="submenu-item">排班考勤管理</a>
+            <a href="#" class="submenu-item">资质证书管理</a>
+            <a href="#" class="submenu-item">绩效考核管理</a>
+            <a href="#" class="submenu-item">培训学习管理</a>
+        </div>
+
+        <!-- 智能设备物联 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">设备统一接入</a>
+            <a href="#" class="submenu-item">穿戴设备监控</a>
+            <a href="#" class="submenu-item">居家智能硬件</a>
+            <a href="#" class="submenu-item">设备故障报修</a>
+            <a href="#" class="submenu-item">设备数据统计</a>
+        </div>
+
+        <!-- AI智慧养老 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">AI健康研判</a>
+            <a href="#" class="submenu-item">AI智能派单</a>
+            <a href="#" class="submenu-item">反诈智能防护</a>
+            <a href="#" class="submenu-item">情绪AI识别</a>
+            <a href="#" class="submenu-item">智能营养配餐</a>
+        </div>
+
+        <!-- 补贴财务中心 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">高龄补贴审核</a>
+            <a href="#" class="submenu-item">护理补贴发放</a>
+            <a href="#" class="submenu-item">服务费用管理</a>
+            <a href="#" class="submenu-item">财务对账报表</a>
+        </div>
+
+        <!-- 关怀活动管理 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-heart"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">上门探访记录</a>
+            <a href="#" class="submenu-item">心理慰藉服务</a>
+            <a href="#" class="submenu-item">社区活动管理</a>
+            <a href="#" class="submenu-item">节日慰问关怀</a>
+        </div>
+
+        <!-- 数据分析大屏 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">全域养老看板</a>
+            <a href="#" class="submenu-item">人口结构分析</a>
+            <a href="#" class="submenu-item">风险分布统计</a>
+            <a href="#" class="submenu-item">民政上报报表</a>
+        </div>
+
+        <!-- 消息通知中心 -->
+        <a href="#" class="menu-item">
+            <i class="fa fa-envelope"></i><span>消息通知中心</span><span class="badge">8</span>
+        </a>
+
+        <!-- 系统权限管理 -->
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">区域组织管理</a>
+            <a href="#" class="submenu-item">账号角色管理</a>
+            <a href="#" class="submenu-item">菜单权限配置</a>
+            <a href="#" class="submenu-item">系统字典配置</a>
+            <a href="#" class="submenu-item">操作日志查询</a>
+            <a href="#" class="submenu-item">数据备份恢复</a>
+        </div>
+    </div>
+
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3>
+        <p>为您提供智能决策建议</p>
+        <button>立即咨询</button>
+        <i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i>
+    </div>
+</div>
+
+<!-- 主内容 -->
+<div class="main-content">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button style="background:none; border:none; font-size:18px;"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="index2.1.html">老人档案管理</a>
+                <a href="index2.2.html" class="active">失能等级评估</a>
+                <a href="index2.3.html">特殊老人管理</a>
+                <a href="index2.4.html">家属绑定管理</a>
+                <a href="index2.5.html">老人台账统计</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">12</span></div>
+            <div class="nav-time" id="currentTime"></div>
+            <div class="nav-weather"><i class="fa fa-sun-o"></i><span>26℃ 多云</span></div>
+            <div class="nav-user"><img src=""/><span>管理员 <i class="fa fa-angle-down"></i></span></div>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <!-- 查询条件 -->
+        <div class="card">
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <input class="form-input w-40" placeholder="老人姓名" id="name">
+                <input class="form-input w-52" placeholder="身份证号" id="idCard">
+                <select class="form-input w-36" id="level">
+                    <option value="">全部等级</option>
+                    <option>正常</option><option>轻度失能</option><option>中度失能</option><option>重度失能</option><option>完全失能</option>
+                </select>
+                <select class="form-input w-40" id="assessor">
+                    <option value="">评估人员</option><option>张医生</option><option>李护士</option><option>王评估师</option>
+                </select>
+                <button class="btn btn-primary" onclick="loadList()"><i class="fa fa-search"></i>查询</button>
+                <button class="btn btn-default" onclick="resetSearch()"><i class="fa fa-refresh"></i>重置</button>
+            </div>
+        </div>
+
+        <!-- 操作栏 -->
+        <div style="display:flex; gap:10px; margin-bottom:16px;">
+            <button class="btn btn-primary" onclick="openAddModal()"><i class="fa fa-plus"></i>新增评估</button>
+            <button class="btn btn-default" onclick="doExport()"><i class="fa fa-download"></i>导出评估表</button>
+            <button class="btn btn-danger" onclick="batchDelete()"><i class="fa fa-trash"></i>批量删除</button>
+        </div>
+
+        <!-- 表格 -->
+        <div class="card" style="padding:0;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th width="50"><input type="checkbox" id="checkAll" onclick="checkAll()"></th>
+                        <th>老人姓名</th><th>性别</th><th>年龄</th><th>身份证号</th>
+                        <th>评估总分</th><th>失能等级</th><th>评估人员</th><th>评估时间</th><th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="dataBody"></tbody>
+            </table>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+    </div>
+</div>
+
+<!-- 评估弹窗 -->
+<div class="modal" id="modal">
+    <div class="modal-body">
+        <h3 style="margin-bottom:18px;" id="modalTitle">新增失能等级评估</h3>
+        <input type="hidden" id="assessId">
+
+        <div class="form-row">
+            <div class="form-item"><label>老人姓名</label><input class="form-input" id="formName"></div>
+            <div class="form-item"><label>性别</label><select class="form-input" id="formGender"><option>男</option><option>女</option></select></div>
+            <div class="form-item"><label>年龄</label><input class="form-input" type="number" id="formAge"></div>
+            <div class="form-item"><label>身份证号</label><input class="form-input" id="formIdCard"></div>
+        </div>
+
+        <div style="border-top:1px solid #e5e7eb; margin:16px 0; padding-top:10px;">
+            <h4 style="margin-bottom:10px; color:#1f2937;">日常行为能力评估（每项 0-10 分）</h4>
+            <div class="form-row">
+                <div class="form-item"><label>进食能力</label><input class="form-input" type="number" id="eat" placeholder="0-10" max=10 min=0></div>
+                <div class="form-item"><label>穿衣能力</label><input class="form-input" type="number" id="dress" placeholder="0-10"></div>
+                <div class="form-item"><label>洗漱能力</label><input class="form-input" type="number" id="wash" placeholder="0-10"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-item"><label>洗澡能力</label><input class="form-input" type="number" id="bath" placeholder="0-10"></div>
+                <div class="form-item"><label>如厕能力</label><input class="form-input" type="number" id="toilet" placeholder="0-10"></div>
+                <div class="form-item"><label>行走能力</label><input class="form-input" type="number" id="walk" placeholder="0-10"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-item"><label>上下楼能力</label><input class="form-input" type="number" id="stairs" placeholder="0-10"></div>
+                <div class="form-item"><label>记忆能力</label><input class="form-input" type="number" id="memory" placeholder="0-10"></div>
+                <div class="form-item"><label>沟通能力</label><input class="form-input" type="number" id="talk" placeholder="0-10"></div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-item"><label>评估人员</label><input class="form-input" id="formAssessor"></div>
+            <div class="form-item"><label>评估地点</label><input class="form-input" id="formAddress"></div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-item" style="flex:none; width:100%;">
+                <label>评估备注 / 异常说明</label>
+                <textarea class="form-input" rows="3" id="formRemark" placeholder="疾病、特殊情况等"></textarea>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+            <div class="score-box">
+                总分：<span id="showScore">0</span> &nbsp;&nbsp;&nbsp; 等级：<span id="showLevel" style="color:#3b82f6;">正常</span>
+            </div>
+            <div style="display:flex; gap:12px;">
+                <button class="btn btn-default" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="autoCalc()">自动计算</button>
+                <button class="btn btn-primary" onclick="saveAssess()">保存评估</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 菜单折叠
+    function toggleSubmenu(el) {
+        const sub = el.nextElementSibling;
+        const arrow = el.querySelector('.menu-arrow');
+        sub.style.display = sub.style.display === 'block' ? 'none' : 'block';
+        arrow.classList.toggle('open');
+    }
+
+    // 模拟数据
+    let mockData = [
+        {id:1,name:'张爷爷',gender:'男',age:73,idCard:'320501195001011234',score:42,level:'中度失能',assessor:'张医生',time:'2025-01-10 10:20',remark:'高血压'},
+        {id:2,name:'李奶奶',gender:'女',age:78,idCard:'320501194602022345',score:21,level:'重度失能',assessor:'李护士',time:'2025-01-10 09:30',remark:'糖尿病'},
+        {id:3,name:'王爷爷',gender:'男',age:69,idCard:'320501195503033456',score:78,level:'轻度失能',assessor:'王评估师',time:'2025-01-09 15:10',remark:'正常'},
+        {id:4,name:'刘奶奶',gender:'女',age:82,idCard:'320501194204044567',score:15,level:'完全失能',assessor:'张医生',time:'2025-01-09 14:20',remark:'长期卧床'},
+        {id:5,name:'赵爷爷',gender:'男',age:65,idCard:'320501195905055678',score:90,level:'正常',assessor:'李护士',time:'2025-01-08 11:00',remark:'健康'},
+    ];
+
+    let page = 1;
+    let limit = 15;
+
+    // 加载列表
+    function loadList() {
+        let name = document.getElementById('name').value;
+        let idCard = document.getElementById('idCard').value;
+        let level = document.getElementById('level').value;
+        let assessor = document.getElementById('assessor').value;
+
+        let list = mockData.filter(item => {
+            return (name == '' || item.name.includes(name)) &&
+                   (idCard == '' || item.idCard.includes(idCard)) &&
+                   (level == '' || item.level == level) &&
+                   (assessor == '' || item.assessor == assessor);
+        });
+        render(list);
+        renderPage(list.length);
+    }
+
+    // 渲染表格
+    function render(list) {
+        let html = '';
+        list.forEach(item => {
+            let cls = item.level == '正常' ? 'tag-normal' :
+                     item.level == '轻度失能' ? 'tag-mild' :
+                     item.level == '中度失能' ? 'tag-middle' : 'tag-heavy';
+            html += `<tr>
+                <td><input type="checkbox" class="check-item" value="${item.id}"></td>
+                <td>${item.name}</td><td>${item.gender}</td><td>${item.age}</td><td>${item.idCard}</td>
+                <td>${item.score}</td>
+                <td><span class="tag ${cls}">${item.level}</span></td>
+                <td>${item.assessor}</td><td>${item.time}</td>
+                <td>
+                    <a onclick="edit(${item.id})" style="color:#3b82f6; margin-right:10px; cursor:pointer;">编辑</a>
+                    <a onclick="del(${item.id})" style="color:red; cursor:pointer;">删除</a>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('dataBody').innerHTML = html;
+    }
+
+    // 自动计算等级
+    function autoCalc() {
+        let arr = ['eat','dress','wash','bath','toilet','walk','stairs','memory','talk'];
+        let total = 0;
+        arr.forEach(id => {
+            let v = parseInt(document.getElementById(id).value) || 0;
+            total += v>10?10:(v<0?0:v);
+        });
+        document.getElementById('showScore').innerText = total;
+        let level = '';
+        if(total >= 85) level = '正常';
+        else if(total >= 65) level = '轻度失能';
+        else if(total >= 40) level = '中度失能';
+        else if(total >= 20) level = '重度失能';
+        else level = '完全失能';
+        document.getElementById('showLevel').innerText = level;
+    }
+
+    // 保存
+    function saveAssess() {
+        let id = document.getElementById('assessId').value;
+        autoCalc();
+        let form = {
+            id: id || Date.now(),
+            name: document.getElementById('formName').value,
+            gender: document.getElementById('formGender').value,
+            age: document.getElementById('formAge').value,
+            idCard: document.getElementById('formIdCard').value,
+            score: document.getElementById('showScore').innerText,
+            level: document.getElementById('showLevel').innerText,
+            assessor: document.getElementById('formAssessor').value,
+            address: document.getElementById('formAddress').value,
+            time: new Date().toLocaleString().substr(0,16),
+            remark: document.getElementById('formRemark').value
+        };
+        if(id) {
+            let i = mockData.findIndex(x=>x.id==id); mockData[i]=form;
+        } else { mockData.unshift(form); }
+        alert('评估保存成功'); closeModal(); loadList();
+    }
+
+    // 编辑
+    function edit(id) {
+        let d = mockData.find(x=>x.id==id);
+        document.getElementById('modalTitle').innerText='编辑失能评估';
+        document.getElementById('assessId').value=d.id;
+        document.getElementById('formName').value=d.name;
+        document.getElementById('formGender').value=d.gender;
+        document.getElementById('formAge').value=d.age;
+        document.getElementById('formIdCard').value=d.idCard;
+        document.getElementById('formAssessor').value=d.assessor;
+        document.getElementById('formAddress').value=d.address||'';
+        document.getElementById('formRemark').value=d.remark||'';
+        document.getElementById('showScore').innerText=d.score;
+        document.getElementById('showLevel').innerText=d.level;
+        document.getElementById('modal').style.display='flex';
+    }
+
+    // 删除
+    function del(id){ if(!confirm('确定删除？')) return; mockData=mockData.filter(x=>x.id!=id); alert('删除成功'); loadList(); }
+    function batchDelete(){
+        let ids = Array.from(document.querySelectorAll('.check-item:checked')).map(i=>i.value);
+        if(!ids.length) return alert('请选择');
+        mockData=mockData.filter(x=>!ids.includes(String(x.id)));
+        alert('批量删除成功'); loadList();
+    }
+
+    // 弹窗
+    function openAddModal(){ document.getElementById('modalTitle').innerText='新增失能等级评估'; document.getElementById('assessId').value=''; document.getElementById('modal').style.display='flex'; }
+    function closeModal(){ document.getElementById('modal').style.display='none'; }
+    function resetSearch(){ document.getElementById('name').value=''; document.getElementById('idCard').value=''; document.getElementById('level').value=''; document.getElementById('assessor').value=''; loadList(); }
+    function doExport(){ alert('导出需后端接口支持，前端已完成'); }
+    function checkAll(){ let c = document.getElementById('checkAll').checked; document.querySelectorAll('.check-item').forEach(i=>i.checked=c); }
+
+    // 分页
+    function renderPage(total){
+        let tp = Math.ceil(total/limit);
+        let h = `<span class="page-item" onclick="page=1;loadList();">首页</span>`;
+        if(page>1) h+=`<span class="page-item" onclick="page--;loadList();">上一页</span>`;
+        h+=`<span class="page-item active">${page}/${tp}</span>`;
+        if(page<tp) h+=`<span class="page-item" onclick="page++;loadList();">下一页</span>`;
+        h+=`<span class="page-item" onclick="page=${tp};loadList();">尾页</span>`;
+        document.getElementById('pagination').innerHTML=h;
+    }
+
+    // 时间
+    setInterval(()=>{
+        document.getElementById('currentTime').innerText = new Date().toLocaleString('zh-CN');
+    },1000);
+
+    loadList();
+</script>
+</body>
+</html>

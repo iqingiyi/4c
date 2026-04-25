@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家属绑定管理 - 智护颐年智慧养老平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; color: #333; }
+
+        .sidebar {
+            width: 190px; background: #fff; border-right: 1px solid #e5e7eb; height: 100vh; position: fixed; left: 0; top: 0; padding: 16px 0; overflow-y: auto; z-index: 100;
+        }
+        .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+        .logo-text h1 { font-size: 18px; font-weight: 600; color: #1f2937; }
+        .logo-text p { font-size: 12px; color: #6b7280; }
+        .menu-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #4b5563; text-decoration: none; font-size: 14px; transition: all 0.2s; cursor: pointer;
+        }
+        .menu-item:hover { background: #eff6ff; color: #3b82f6; }
+        .menu-item.active { background: #eff6ff; color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .menu-item .badge { margin-left: auto; background: #ef4444; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 10px; }
+        .submenu { display: none; overflow: hidden; }
+        .submenu-item { display: flex; align-items: center; padding: 10px 20px 10px 36px; color: #6b7280; text-decoration: none; font-size: 13px; transition: 0.2s; }
+        .submenu-item:hover { background: #f9fafb; color: #3b82f6; }
+        .menu-arrow { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+        .menu-arrow.open { transform: rotate(90deg); }
+        .ai-assistant {
+            position: sticky; bottom: 16px; margin: 12px; background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border-radius: 14px; padding: 16px; border: 1px solid #bfdbfe;
+        }
+        .ai-assistant h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; color: #1e40af; }
+        .ai-assistant p { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+        .ai-assistant button {
+            width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 9px;
+            font-size: 12.5px; cursor: pointer; font-weight: 600; transition: 0.2s;
+        }
+
+        .main-content { margin-left: 190px; }
+        .top-nav {
+            background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .nav-menu { display: flex; gap: 32px; }
+        .nav-menu a { text-decoration: none; color: #4b5563; font-size: 14px; font-weight: 500; padding: 6px 0; }
+        .nav-menu a.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
+        .nav-right { display: flex; align-items: center; gap: 24px; }
+        .nav-notification { position: relative; font-size: 18px; color: #6b7280; }
+        .nav-notification .badge { position: absolute; top: -6px; right: -6px; background: #ef4444; color: #fff; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
+        .nav-time { font-size: 14px; color: #4b5563; }
+        .nav-weather { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #6b7280; }
+        .nav-user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .nav-user img { width: 32px; height: 32px; border-radius: 50%; background: #e5e7eb; }
+        .content-container { padding: 20px 24px; }
+        .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px; border:1px solid #eef2f5; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th { padding: 14px 12px; text-align: left; font-size: 13px; color: #6b7280; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+        .table td { padding: 14px 12px; font-size: 14px; color: #374151; border-bottom: 1px solid #f9fafb; }
+        .table tr:hover { background: #f9fbfd; }
+        .tag { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight:500; color: #fff; }
+        .tag-green { background: #10b981; }
+        .tag-blue { background: #3b82f6; }
+        .tag-orange { background: #f97316; }
+        .btn { padding: 7px 14px; border-radius: 6px; font-size: 14px; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-default { background: #f3f4f6; color: #4b5563; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .form-input { width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-body { width: 800px; background: #fff; border-radius: 12px; padding: 24px; max-height: 85vh; overflow-y: auto; }
+        .form-row { display: flex; gap: 16px; margin-bottom: 14px; flex-wrap:wrap; }
+        .form-item { flex: 1; min-width:220px; }
+        .form-item label { display: block; font-size: 13px; color: #6b7280; margin-bottom: 4px; font-weight:500; }
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+        .page-item { padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .page-item.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+    </style>
+</head>
+<body>
+
+<!-- ====================== 侧边栏（完全和你代码一样，没有任何改动） ====================== -->
+<div class="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-cloud"></i></div>
+        <div class="logo-text"><h1>智护颐年</h1><p>智慧养老服务资源调度平台</p></div>
+    </div>
+
+    <div class="menu">
+        <a href="#" class="menu-item">
+            <i class="fa fa-home"></i><span>首页总览</span>
+        </a>
+
+        <div class="menu-item active" onclick="toggleSubmenu(this)">
+            <i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow open"></i>
+        </div>
+        <div class="submenu" style="display:block;">
+            <a href="index2.1.html" class="submenu-item">老人档案管理</a>
+            <a href="index2.2.html" class="submenu-item">失能等级评估</a>
+            <a href="index2.3.html" class="submenu-item active">特殊老人管理</a>
+            <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
+            <a href="index2.5.html" class="submenu-item">老人台账统计</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时健康数据</a>
+            <a href="#" class="submenu-item">慢病专项管理</a>
+            <a href="#" class="submenu-item">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item">健康趋势分析</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时告警中心</a>
+            <a href="#" class="submenu-item">跌倒/离床预警</a>
+            <a href="#" class="submenu-item">电子围栏管控</a>
+            <a href="#" class="submenu-item">居家安防预警</a>
+            <a href="#" class="submenu-item">预警处置闭环</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">工单智能派单</a>
+            <a href="#" class="submenu-item">上门服务管理</a>
+            <a href="#" class="submenu-item">照护计划定制</a>
+            <a href="#" class="submenu-item">服务评价管理</a>
+            <a href="#" class="submenu-item">服务时长监管</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">护理人员档案</a>
+            <a href="#" class="submenu-item">排班考勤管理</a>
+            <a href="#" class="submenu-item">资质证书管理</a>
+            <a href="#" class="submenu-item">绩效考核管理</a>
+            <a href="#" class="submenu-item">培训学习管理</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">设备统一接入</a>
+            <a href="#" class="submenu-item">穿戴设备监控</a>
+            <a href="#" class="submenu-item">居家智能硬件</a>
+            <a href="#" class="submenu-item">设备故障报修</a>
+            <a href="#" class="submenu-item">设备数据统计</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">AI健康研判</a>
+            <a href="#" class="submenu-item">AI智能派单</a>
+            <a href="#" class="submenu-item">反诈智能防护</a>
+            <a href="#" class="submenu-item">情绪AI识别</a>
+            <a href="#" class="submenu-item">智能营养配餐</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">高龄补贴审核</a>
+            <a href="#" class="submenu-item">护理补贴发放</a>
+            <a href="#" class="submenu-item">服务费用管理</a>
+            <a href="#" class="submenu-item">财务对账报表</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-heart"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">上门探访记录</a>
+            <a href="#" class="submenu-item">心理慰藉服务</a>
+            <a href="#" class="submenu-item">社区活动管理</a>
+            <a href="#" class="submenu-item">节日慰问关怀</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">全域养老看板</a>
+            <a href="#" class="submenu-item">人口结构分析</a>
+            <a href="#" class="submenu-item">风险分布统计</a>
+            <a href="#" class="submenu-item">民政上报报表</a>
+        </div>
+
+        <a href="#" class="menu-item">
+            <i class="fa fa-envelope"></i><span>消息通知中心</span><span class="badge">8</span>
+        </a>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">区域组织管理</a>
+            <a href="#" class="submenu-item">账号角色管理</a>
+            <a href="#" class="submenu-item">菜单权限配置</a>
+            <a href="#" class="submenu-item">系统字典配置</a>
+            <a href="#" class="submenu-item">操作日志查询</a>
+            <a href="#" class="submenu-item">数据备份恢复</a>
+        </div>
+    </div>
+
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3>
+        <p>为您提供智能决策建议</p>
+        <button>立即咨询</button>
+        <i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i>
+    </div>
+</div>
+
+<!-- 顶部导航 100% 不变 -->
+<div class="main-content">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button style="background:none;border:none;font-size:18px;"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="index2.1.html">老人档案管理</a>
+                <a href="index2.2.html">失能等级评估</a>
+                <a href="index2.3.html">特殊老人管理</a>
+                <a href="index2.4.html" class="active">家属绑定管理</a>
+                <a href="index2.5.html">老人台账统计</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">12</span></div>
+            <div class="nav-time" id="currentTime"></div>
+            <div class="nav-weather"><i class="fa fa-sun-o"></i><span>26℃ 多云</span></div>
+            <div class="nav-user"><img src=""/><span>管理员 <i class="fa fa-angle-down"></i></span></div>
+        </div>
+    </div>
+
+    <!-- 家属绑定管理 全新精美页面 -->
+    <div class="content-container">
+        <div class="card">
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                <input class="form-input w-44" placeholder="老人姓名" id="elderName">
+                <input class="form-input w-44" placeholder="家属姓名" id="familyName">
+                <input class="form-input w-52" placeholder="家属手机号" id="phone">
+                <select class="form-input w-40" id="relation">
+                    <option value="">全部关系</option>
+                    <option>子女</option><option>配偶</option><option>父母</option><option>兄弟姐妹</option><option>其他</option>
+                </select>
+                <button class="btn btn-primary" onclick="loadList()"><i class="fa fa-search"></i>查询</button>
+                <button class="btn btn-default" onclick="resetSearch()"><i class="fa fa-refresh"></i>重置</button>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px; margin-bottom:16px;">
+            <button class="btn btn-primary" onclick="openAdd()"><i class="fa fa-link"></i>绑定家属</button>
+            <button class="btn btn-default" onclick="doExport()"><i class="fa fa-download"></i>导出绑定记录</button>
+            <button class="btn btn-danger" onclick="unbindBatch()"><i class="fa fa-unlink"></i>批量解除绑定</button>
+        </div>
+
+        <div class="card" style="padding:0;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th width="50"><input type="checkbox" onclick="checkAll()" id="checkAll"></th>
+                        <th>老人姓名</th>
+                        <th>家属姓名</th>
+                        <th>亲属关系</th>
+                        <th>家属电话</th>
+                        <th>绑定时间</th>
+                        <th>绑定状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="dataBody"></tbody>
+            </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+</div>
+
+<!-- 绑定弹窗 -->
+<div class="modal" id="modal">
+    <div class="modal-body">
+        <h3 id="modalTitle" style="margin-bottom:18px;">家属绑定</h3>
+        <input type="hidden" id="bindId">
+        <div class="form-row">
+            <div class="form-item"><label>老人姓名</label><input class="form-input" id="eName"></div>
+            <div class="form-item"><label>老人身份证号</label><input class="form-input" id="eIdCard"></div>
+            <div class="form-item"><label>家属姓名</label><input class="form-input" id="fName"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-item"><label>亲属关系</label>
+                <select class="form-input" id="fRelation">
+                    <option>子女</option><option>配偶</option><option>父母</option><option>兄弟姐妹</option><option>监护人</option><option>其他</option>
+                </select>
+            </div>
+            <div class="form-item"><label>家属手机号</label><input class="form-input" id="fPhone"></div>
+            <div class="form-item"><label>紧急联系优先级</label>
+                <select class="form-input" id="priority">
+                    <option>主要联系人</option>
+                    <option>次要联系人</option>
+                    <option>备用联系人</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-item" style="min-width:100%;">
+                <label>备注说明（选填）</label>
+                <textarea class="form-input" rows="3" id="remark" placeholder="例如：24小时可联系、夜间勿扰、长期在外等"></textarea>
+            </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
+            <button class="btn btn-default" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveBind()">保存绑定</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleSubmenu(el){
+        let sub = el.nextElementSibling;
+        let arr = el.querySelector('.menu-arrow');
+        sub.style.display = sub.style.display=='block'?'none':'block';
+        arr.classList.toggle('open');
+    }
+
+    let mockData = [
+        {id:1,elderName:'张奶奶',elderIdCard:'320501194501011234',familyName:'张晓丽',relation:'子女',phone:'13812345678',priority:'主要',bindTime:'2025-01-10',status:'正常',remark:'长期在本地'},
+        {id:2,elderName:'王爷爷',elderIdCard:'320501194102022345',familyName:'王辉',relation:'子女',phone:'13987654321',priority:'主要',bindTime:'2025-01-09',status:'正常',remark:'每周探望一次'},
+        {id:3,elderName:'刘奶奶',elderIdCard:'320501195203033456',familyName:'陈明',relation:'配偶',phone:'13711112222',priority:'主要',bindTime:'2025-01-08',status:'正常',remark:'同住'},
+    ];
+
+    let page=1,limit=15;
+
+    function loadList(){
+        let en = document.getElementById('elderName').value;
+        let fn = document.getElementById('familyName').value;
+        let ph = document.getElementById('phone').value;
+        let re = document.getElementById('relation').value;
+        let list = mockData.filter(i=>(!en||i.elderName.includes(en))&&(!fn||i.familyName.includes(fn))&&(!ph||i.phone.includes(ph))&&(!re||i.relation==re));
+        render(list); renderPage(list.length);
+    }
+
+    function render(list){
+        let html='';
+        list.forEach(i=>{
+            let tag = i.status=='正常'?'tag-green':'tag-orange';
+            html+=`<tr>
+                <td><input type="checkbox" class="check-item" value="${i.id}"></td>
+                <td>${i.elderName}</td>
+                <td>${i.familyName}</td>
+                <td>${i.relation}</td>
+                <td>${i.phone}</td>
+                <td>${i.bindTime}</td>
+                <td><span class="tag ${tag}">${i.status}</span></td>
+                <td>
+                    <a onclick="edit(${i.id})" style="color:#3b82f6;cursor:pointer;margin-right:10px;">编辑</a>
+                    <a onclick="unbind(${i.id})" style="color:red;cursor:pointer;">解除绑定</a>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('dataBody').innerHTML=html;
+    }
+
+    function saveBind(){
+        let form = {
+            id:document.getElementById('bindId').value||Date.now(),
+            elderName:document.getElementById('eName').value,
+            elderIdCard:document.getElementById('eIdCard').value,
+            familyName:document.getElementById('fName').value,
+            relation:document.getElementById('fRelation').value,
+            phone:document.getElementById('fPhone').value,
+            priority:document.getElementById('priority').value,
+            bindTime:new Date().toLocaleString().substr(0,10),
+            status:'正常',
+            remark:document.getElementById('remark').value
+        };
+        let idx = mockData.findIndex(x=>x.id==form.id);
+        idx>=0 ? mockData[idx]=form : mockData.unshift(form);
+        alert('绑定成功！'); closeModal(); loadList();
+    }
+
+    function edit(id){
+        let d=mockData.find(x=>x.id==id);
+        document.getElementById('modalTitle').innerText='编辑绑定';
+        document.getElementById('bindId').value=d.id;
+        document.getElementById('eName').value=d.elderName;
+        document.getElementById('eIdCard').value=d.elderIdCard;
+        document.getElementById('fName').value=d.familyName;
+        document.getElementById('fRelation').value=d.relation;
+        document.getElementById('fPhone').value=d.phone;
+        document.getElementById('priority').value=d.priority||'主要联系人';
+        document.getElementById('remark').value=d.remark||'';
+        document.getElementById('modal').style.display='flex';
+    }
+
+    function unbind(id){ if(!confirm('确定解除绑定？')) return; mockData=mockData.filter(x=>x.id!=id); alert('已解除'); loadList(); }
+    function unbindBatch(){
+        let arr = Array.from(document.querySelectorAll('.check-item:checked')).map(i=>i.value);
+        if(!arr.length){alert('请选择数据');return;}
+        mockData=mockData.filter(x=>!arr.includes(String(x.id)));
+        alert('批量解除成功'); loadList();
+    }
+
+    function openAdd(){ document.getElementById('modalTitle').innerText='新增家属绑定'; document.getElementById('bindId').value=''; document.getElementById('modal').style.display='flex'; }
+    function closeModal(){ document.getElementById('modal').style.display='none'; }
+    function resetSearch(){ document.getElementById('elderName').value='';document.getElementById('familyName').value='';document.getElementById('phone').value='';document.getElementById('relation').value='';loadList(); }
+    function doExport(){ alert('导出需对接后端接口'); }
+    function checkAll(){ let c=document.getElementById('checkAll').checked; document.querySelectorAll('.check-item').forEach(i=>i.checked=c); }
+
+    function renderPage(total){
+        let tp=Math.ceil(total/limit);
+        let h=`<span class="page-item" onclick="page=1;loadList()">首页</span>`;
+        if(page>1)h+=`<span class="page-item" onclick="page--;loadList()">上一页</span>`;
+        h+=`<span class="page-item active">${page}/${tp}</span>`;
+        if(page<tp)h+=`<span class="page-item" onclick="page++;loadList()">下一页</span>`;
+        h+=`<span class="page-item" onclick="page=${tp};loadList()">尾页</span>`;
+        document.getElementById('pagination').innerHTML=h;
+    }
+
+    setInterval(()=>{
+        document.getElementById('currentTime').innerText=new Date().toLocaleString('zh-CN');
+    },1000);
+
+    loadList();
+</script>
+</body>
+</html>
