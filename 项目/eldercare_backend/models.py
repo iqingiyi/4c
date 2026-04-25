@@ -3,26 +3,30 @@ from database import Base
 from datetime import datetime
 
 class Elder(Base):
-    """老人档案表"""
+    """老人档案与资金表"""
     __tablename__ = "elders"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50), index=True)
     age = Column(Integer)
     gender = Column(String(10))
-    risk_level = Column(String(20))     # 高风险/中风险/低风险/正常
-    community = Column(String(50))      # 所属社区（如：幸福里小区）
-    address = Column(String(255))       # 详细地址
-    latitude = Column(Float)            # 纬度 (用于前端地图)
-    longitude = Column(Float)           # 经度 (用于前端地图)
+    risk_level = Column(String(20))
+    community = Column(String(50))
+    address = Column(String(255))
+    latitude = Column(Float)
+    longitude = Column(Float)
     disability = Column(String(20), default="未评估")
+    # 财务相关字段
+    balance = Column(Float, default=0.0)
+    subsidy_standard = Column(Integer, default=0)
+    total_consumption = Column(Float, default=0.0)
 
 class Caregiver(Base):
     """护理人员表"""
     __tablename__ = "caregivers"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(50))
-    specialty = Column(String(100))     # 擅长领域（如：急救、慢性病）
-    status = Column(String(20), default="空闲") # 空闲/服务中
+    specialty = Column(String(100))
+    status = Column(String(20), default="空闲")
 
 class ServiceTask(Base):
     """服务工单表"""
@@ -30,7 +34,7 @@ class ServiceTask(Base):
     id = Column(Integer, primary_key=True, index=True)
     elder_id = Column(Integer, ForeignKey("elders.id"))
     caregiver_id = Column(Integer, ForeignKey("caregivers.id"), nullable=True)
-    task_type = Column(String(50))      # 生活照料/健康监测/医疗护理...
-    priority = Column(String(20))       # 高/中/低
-    status = Column(String(20))         # 待分配/服务中/已完成
+    task_type = Column(String(50))
+    priority = Column(String(20))
+    status = Column(String(20))
     create_time = Column(DateTime, default=datetime.now)

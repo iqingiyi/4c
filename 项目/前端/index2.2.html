@@ -55,36 +55,72 @@
 <body>
 
 <div class="sidebar">
-    <div class="logo">
-        <div class="logo-icon"><i class="fa fa-cloud"></i></div>
-        <div class="logo-text"><h1>智护颐年</h1><p>智慧养老服务资源调度平台</p></div>
-    </div>
-    <div class="menu">
-        <a href="index9.html" class="menu-item"><i class="fa fa-home"></i><span>首页总览</span></a>
-        
-        <div class="menu-item active" onclick="toggleSubmenu(this)">
-            <i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow open"></i>
-        </div>
-        <div class="submenu" style="display:block;">
-            <a href="index2.1.html" class="submenu-item">老人档案管理</a>
-            <a href="index2.2.html" class="submenu-item active">失能等级评估</a>
-            <a href="index2.3.html" class="submenu-item">特殊老人管理</a>
-            <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
-            <a href="index2.5.html" class="submenu-item">老人台账统计</a>
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fa fa-cloud"></i>
+            </div>
+            <div class="logo-text">
+                <h1>智护颐年</h1>
+                <p>智慧养老服务资源调度平台</p>
+            </div>
         </div>
 
-        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
-        <div class="submenu"><a href="#" class="submenu-item">实时健康数据</a></div>
-        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow"></i></div>
-        <div class="submenu"><a href="#" class="submenu-item">实时告警中心</a></div>
+        <div class="menu">
+            <a href="index9.html" class="menu-item">
+                <i class="fa fa-home"></i><span>首页总览</span>
+            </a>
+
+            <div class="menu-item active" onclick="toggleSubmenu(this)">
+                <i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow open"></i>
+            </div>
+            <div class="submenu" style="display:block;">
+                <a href="index2.1.html" class="submenu-item">老人档案管理</a>
+                <a href="index2.2.html" class="submenu-item active">失能等级评估</a>
+                <a href="index2.3.html" class="submenu-item">特殊老人管理</a>
+                <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
+                <a href="index2.5.html" class="submenu-item">老人资金台账</a>
+            </div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">实时健康数据</a><a href="#" class="submenu-item">慢病专项管理</a><a href="#" class="submenu-item">用药管理中心</a><a href="#" class="submenu-item">体检档案记录</a><a href="#" class="submenu-item">健康趋势分析</a></div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">实时告警中心</a><a href="#" class="submenu-item">跌倒/离床预警</a><a href="#" class="submenu-item">电子围栏管控</a><a href="#" class="submenu-item">居家安防预警</a><a href="#" class="submenu-item">预警处置闭环</a></div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">工单智能派单</a><a href="#" class="submenu-item">上门服务管理</a><a href="#" class="submenu-item">照护计划定制</a><a href="#" class="submenu-item">服务评价管理</a><a href="#" class="submenu-item">服务时长监管</a></div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">护理人员档案</a><a href="#" class="submenu-item">排班考勤管理</a><a href="#" class="submenu-item">资质证书管理</a><a href="#" class="submenu-item">绩效考核管理</a><a href="#" class="submenu-item">培训学习管理</a></div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">设备统一接入</a><a href="#" class="submenu-item">穿戴设备监控</a><a href="#" class="submenu-item">居家智能硬件</a><a href="#" class="submenu-item">设备故障报修</a><a href="#" class="submenu-item">设备数据统计</a></div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">AI健康研判</a><a href="#" class="submenu-item">AI智能派单</a><a href="#" class="submenu-item">反诈智能防护</a><a href="#" class="submenu-item">情绪AI识别</a><a href="#" class="submenu-item">智能营养配餐</a></div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">高龄补贴审核</a><a href="#" class="submenu-item">护理补贴发放</a><a href="#" class="submenu-item">服务费用管理</a><a href="#" class="submenu-item">财务对账报表</a></div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heart"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">上门探访记录</a><a href="#" class="submenu-item">心理慰藉服务</a><a href="#" class="submenu-item">社区活动管理</a><a href="#" class="submenu-item">节日慰问关怀</a></div>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">全域养老看板</a><a href="#" class="submenu-item">人口结构分析</a><a href="#" class="submenu-item">风险分布统计</a><a href="#" class="submenu-item">民政上报报表</a></div>
+
+            <a href="#" class="menu-item"><i class="fa fa-envelope"></i><span>消息通知中心</span><span class="badge">8</span></a>
+
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">区域组织管理</a><a href="#" class="submenu-item">账号角色管理</a><a href="#" class="submenu-item">菜单权限配置</a><a href="#" class="submenu-item">系统字典配置</a><a href="#" class="submenu-item">操作日志查询</a><a href="#" class="submenu-item">数据备份恢复</a></div>
+        </div>
+
+        <div class="ai-assistant">
+            <h3>AI助手小智</h3>
+            <p>为您提供智能决策建议</p>
+            <button>立即咨询</button>
+            <i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i>
+        </div>
     </div>
-    <div class="ai-assistant">
-        <h3>AI助手小智</h3>
-        <p>为您提供智能决策建议</p>
-        <button>立即咨询</button>
-        <i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i>
-    </div>
-</div>
 
 <div class="main-content">
     <div class="top-nav">
