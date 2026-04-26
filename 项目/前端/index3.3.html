@@ -547,14 +547,10 @@ function setTime(){
 }
 setTime();
 setInterval(setTime,1000);
+const API_BASE = "http://127.0.0.1:8000";
+let currentTabType = "all";
+let medicineData = [];
 
-const medicineData = [
-    {id:1,elderName:"张爷爷",elderTag:"高血压｜73岁",drugName:"硝苯地平缓释片",drugType:"降压类-钙通道阻滞剂",dose:"1片/次",freq:"每日2次",time:"08:00 / 20:00",useType:"long",status:"on",notify:"设备+平台+子女",deviceStatus:"online",startTime:"2025-10-01",endTime:"长期用药"},
-    {id:2,elderName:"王奶奶",elderTag:"糖尿病｜79岁",drugName:"二甲双胍片",drugType:"降糖类-双胍类",dose:"1片/次",freq:"每日2次",time:"08:00 / 20:00",useType:"long",status:"wait",notify:"设备+子女",deviceStatus:"online",startTime:"2025-09-15",endTime:"2026-02-10"},
-    {id:3,elderName:"刘爷爷",elderTag:"冠心病｜81岁",drugName:"阿司匹林肠溶片",drugType:"降脂抗血栓-抗血小板",dose:"1片/次",freq:"每日1次",time:"09:00",useType:"long",status:"off",notify:"设备+平台",deviceStatus:"error",startTime:"2025-08-20",endTime:"长期用药"},
-    {id:4,elderName:"陈奶奶",elderTag:"高血压｜75岁",drugName:"氨氯地平片",drugType:"降压类-钙通道阻滞剂",dose:"半片/次",freq:"每日1次",time:"08:30",useType:"temp",status:"delay",notify:"仅设备",deviceStatus:"online",startTime:"2026-01-05",endTime:"2026-03-05"},
-    {id:5,elderName:"吴奶奶",elderTag:"健康老人｜71岁",drugName:"奥美拉唑",drugType:"肠胃消化类-抑酸护胃",dose:"1粒/次",freq:"每日3次",time:"07:30/12:00/19:00",useType:"temp",status:"pause",notify:"平台+子女",deviceStatus:"offline",startTime:"2026-04-01",endTime:"2026-04-15"}
-];
 
 const statusMap = {
     on:{text:"已按时服药",class:"tag-on"},
@@ -571,9 +567,32 @@ const deviceMap = {
 };
 const useTypeMap = {long:"长期慢病用药",temp:"临时短期用药"};
 
-function loadMedicineList(){
-    let list = medicineData;
-    renderMedicineTable(list);
+async function loadMedicineList(){
+    const elderName = document.getElementById('searchElder').value.trim();
+    const drugType = document.getElementById('searchDrugType').value;
+    const status = document.getElementById('searchStatus').value;
+    const deviceStatus = document.getElementById('searchDevice').value;
+
+    const params = new URLSearchParams({
+    elderName,
+    drugType,
+    status,
+    deviceStatus,
+    tagType: currentTabType || "all"
+});
+
+    const res = await fetch(`${API_BASE}/api/medicine/list?${params.toString()}`);
+    const result = await res.json();
+
+    medicineData = result.data || [];
+    renderMedicineTable(medicineData);
+
+    if (result.stats) {
+        document.getElementById('totalPlan').innerText = result.stats.total;
+        document.getElementById('waitCount').innerText = result.stats.wait;
+        document.getElementById('offCount').innerText = result.stats.off;
+        document.getElementById('complianceRate').innerText = result.stats.compliance + "%";
+    }
 }
 function renderMedicineTable(list){
     const body = document.getElementById('medicineTableBody');
@@ -614,15 +633,60 @@ function closeDrugLibModal(){document.getElementById('drugLibModal').style.displ
 function closeDetailModal(){document.getElementById('medicineDetailModal').style.display="none";}
 function closeAiModal(){document.getElementById('medicineAiModal').style.display="none";}
 
-function saveMedicinePlan(){
-    alert("✅ 精细药品计划保存成功，已同步智能药盒 & 子女通知！");
+async function saveMedicinePlan(){
+    const data = {
+        elder_name: document.getElementById('planElderName').value.trim(),
+        elder_tag: document.getElementById('planElderTag').value.trim(),
+        drug_name: document.getElementById('planDrugName').value.trim(),
+        drug_type: document.getElementById('planDrugType').value.trim(),
+        dose: document.getElementById('planDose').value.trim(),
+        freq: document.getElementById('planFreq').value.trim(),
+        time: document.getElementById('planTime').value.trim(),
+        use_type: document.getElementById('planUseType').value,
+        status: "wait",
+        notify: document.getElementById('planNotify').value || "设备+平台+子女",
+        device_status: "online",
+        start_time: document.getElementById('planStartTime').value,
+        end_time: document.getElementById('planEndTime').value || "长期用药",
+        doctor_advice: document.getElementById('planDoctorAdvice').value.trim(),
+        remark: document.getElementById('planRemark').value.trim()
+    };
+
+    const res = await fetch(`${API_BASE}/api/medicine`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    alert(result.msg || "保存成功");
     closeMedicinePlanModal();
     loadMedicineList();
 }
 
-function openMedicineDetail(id){
-    const item = medicineData.find(v=>v.id===id);
-    const st = statusMap[item.status];
+async function openMedicineDetail(id){
+    const res = await fetch(`${API_BASE}/api/medicine/${id}`);
+    const result = await res.json();
+
+    const item = result.data;
+    const logs = result.logs || [];
+
+    const st = statusMap[item.status] || statusMap.wait;
+    const dev = deviceMap[item.deviceStatus] || deviceMap.online;
+
+    const logHtml = logs.map(log => {
+        const color = log.status === "on" ? "text-success" : log.status === "off" ? "text-danger" : "text-warning";
+        return `
+            <div class="flex justify-between py-1 border-b">
+                <span>${log.date}</span>
+                <span class="${color}">${log.result}</span>
+            </div>
+        `;
+    }).join("");
+
     document.getElementById('detailCardBox').innerHTML = `
     <div class="medicine-card">
         <div class="card-title">${item.elderName}｜精细化用药全景卡片</div>
@@ -632,60 +696,45 @@ function openMedicineDetail(id){
         <div class="mb-2"><b>今日服药时间：</b>${item.time}</div>
         <div class="mb-2"><b>当前状态：</b><span class="tag ${st.class}">${st.text}</span></div>
         <div class="mb-2"><b>提醒渠道：</b>${item.notify}</div>
-        <div class="mb-2"><b>智能设备：</b>${deviceMap[item.deviceStatus].text}</div>
+        <div class="mb-2"><b>智能设备：</b><span class="${dev.class}">${dev.text}</span></div>
         <div class="mb-2"><b>用药周期：</b>${item.startTime} 至 ${item.endTime}</div>
+        <div class="mb-2"><b>医生医嘱：</b>${item.doctorAdvice || "暂无"}</div>
+        <div class="mb-2"><b>禁忌备注：</b>${item.remark || "暂无"}</div>
     </div>
+
     <div class="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
         <div class="font-semibold text-blue-700 mb-2">📋 近期精细服药记录</div>
-        <div class="flex justify-between py-1 border-b"><span>04-25</span><span class="text-success">正常按时服药</span></div>
-        <div class="flex justify-between py-1 border-b"><span>04-24</span><span class="text-success">正常按时服药</span></div>
-        <div class="flex justify-between py-1 border-b"><span>04-23</span><span class="text-warning">晚间漏服，已推送子女+设备告警</span></div>
+        ${logHtml}
     </div>
-    ${item.status==='off'?`<div class="mt-3 p-3 bg-red-50 rounded-lg text-sm text-danger">⚠️ 今日漏服，已多级推送：智能药盒声光告警+子女短信/小程序消息+平台预警</div>`:''}`;
-    document.getElementById('medicineDetailModal').style.display="flex";
+
+    ${item.status === 'off' ? `<div class="mt-3 p-3 bg-red-50 rounded-lg text-sm text-danger">⚠️ 今日漏服，已多级推送：智能药盒声光告警 + 子女端消息 + 平台预警</div>` : ''}
+    `;
+
+    document.getElementById('medicineDetailModal').style.display = "flex";
 }
 
-function openElderAiMedicine(id){
-    const item = medicineData.find(v=>v.id===id);
-    document.getElementById('medicineAiModal').style.display="flex";
+async function openElderAiMedicine(id){
+    document.getElementById('medicineAiModal').style.display = "flex";
     document.getElementById('aiMedicineResult').innerText = "AI正在精细化分析药品子类、慢病匹配、药物冲突、禁忌风险...";
-    setTimeout(()=>{
-        document.getElementById('aiMedicineResult').innerText = `【${item.elderName}·精细化AI用药分析】
-老人基础慢病：${item.elderTag}
-在用药品：${item.drugName}
-精细药品分类：${item.drugType}
-服用规格：${item.dose} / ${item.freq}
 
-▸ 药品适配性分析
-该药品为老年专科常用药，对应慢病分类匹配精准；
-同子类药物无叠加冲突，配伍安全合规；
-严格限制剂量，不可私自加量、减量。
+    const res = await fetch(`${API_BASE}/api/medicine/ai/${id}`);
+    const result = await res.json();
 
-▸ 服药行为分析
-当前服药状态：${statusMap[item.status].text}
-长期规律服药可稳定慢病指标，降低并发症风险。
-
-▸ 设备&家属联动建议
-智能药盒实时定时提醒，无人值守自动管控；
-漏服、错服实时多级预警，保障老人用药安全。`;
-    },1200);
+    document.getElementById('aiMedicineResult').innerText = result.data.report;
 }
 
-function openGlobalAi(){
-    document.getElementById('medicineAiModal').style.display="flex";
+async function openGlobalAi(){
+    document.getElementById('medicineAiModal').style.display = "flex";
     document.getElementById('aiMedicineResult').innerText = "AI全院精细化药品分类统计分析中...";
-    setTimeout(()=>{
-        document.getElementById('aiMedicineResult').innerText = `【全院精细化药品管理AI报告】
-1. 全院在用药品覆盖7大一级分类、20+二级精细子类；
-2. 降压类、降糖类为高频用药，库存需重点巡检；
-3. 3种药品临近有效期，建议及时下架更换；
-4. 2台智能药盒设备异常，需检修保障无人值守用药；
-5. 建议按精细药品分类分区管理，提升养老用药规范性。`;
-    },1000);
+
+    const res = await fetch(`${API_BASE}/api/medicine/ai-summary`);
+    const result = await res.json();
+
+    document.getElementById('aiMedicineResult').innerText = result.data.report;
 }
 
 function exportMedicineExcel(){
-    alert("📥 精细化分类用药台账已导出Excel，后端接口：/api/medicine/export");
+    window.open(`${API_BASE}/api/medicine/export`, "_blank");
 }
 
 function initChart(){

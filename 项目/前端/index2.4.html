@@ -344,13 +344,33 @@
 
     let page=1,limit=15;
 
-    function loadList(){
-        let en = document.getElementById('elderName').value;
-        let fn = document.getElementById('familyName').value;
-        let ph = document.getElementById('phone').value;
-        let re = document.getElementById('relation').value;
-        let list = mockData.filter(i=>(!en||i.elderName.includes(en))&&(!fn||i.familyName.includes(fn))&&(!ph||i.phone.includes(ph))&&(!re||i.relation==re));
-        render(list); renderPage(list.length);
+    // 替换 index2.4.html 原本的 loadList
+    async function loadList() {
+        try {
+            let en = document.getElementById('elderName').value;
+            // 💡 核心对接：调用后端 2.4 列表接口 (支持按老人名字搜索)
+            let response = await fetch(`http://127.0.0.1:8000/api/family/list?elder_name=${en}`);
+            let res = await response.json();
+            
+            if (res.code === 200) {
+                mockData = res.data; // 拿到后端真实家属列表
+
+                let fn = document.getElementById('familyName').value;
+                let ph = document.getElementById('phone').value;
+                let re = document.getElementById('relation').value;
+                
+                let list = mockData.filter(i => 
+                    (!fn || i.family_name.includes(fn)) && 
+                    (!ph || i.phone.includes(ph)) && 
+                    (!re || i.relation == re)
+                );
+                // 注意：因为后端返回的字段名是 family_name，所以前端 render 里的 i.familyName 要改成 i.family_name
+                render(list); 
+                renderPage(list.length);
+            }
+        } catch (error) {
+            console.error("查询接口失败", error);
+        }
     }
 
     function render(list){
@@ -374,22 +394,36 @@
         document.getElementById('dataBody').innerHTML=html;
     }
 
-    function saveBind(){
-        let form = {
-            id:document.getElementById('bindId').value||Date.now(),
-            elderName:document.getElementById('eName').value,
-            elderIdCard:document.getElementById('eIdCard').value,
-            familyName:document.getElementById('fName').value,
-            relation:document.getElementById('fRelation').value,
-            phone:document.getElementById('fPhone').value,
-            priority:document.getElementById('priority').value,
-            bindTime:new Date().toLocaleString().substr(0,10),
-            status:'正常',
-            remark:document.getElementById('remark').value
+    // 替换 index2.4.html 原本的 saveBind
+    async function saveBind() {
+        // 按照后端要求的字段名组装数据
+        let formData = {
+            elder_id: 1, // ⚠️ 注意：这里应该让用户填ID或者下拉选择，测试时先写死1
+            name: document.getElementById('fName').value,
+            phone: document.getElementById('fPhone').value,
+            relation: document.getElementById('fRelation').value,
+            is_primary: document.getElementById('priority').value === '主要联系人' ? 1 : 0
         };
-        let idx = mockData.findIndex(x=>x.id==form.id);
-        idx>=0 ? mockData[idx]=form : mockData.unshift(form);
-        alert('绑定成功！'); closeModal(); loadList();
+
+        try {
+            // 💡 核心对接：调用后端 2.4 绑定接口
+            let response = await fetch('http://127.0.0.1:8000/api/family/bind', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            let res = await response.json();
+            
+            if (res.code === 200) {
+                alert('绑定成功！'); 
+                closeModal(); 
+                loadList(); // 重新向后端拉取最新列表
+            } else {
+                alert(res.msg);
+            }
+        } catch (error) {
+            alert('保存失败，请检查后端连接');
+        }
     }
 
     function edit(id){

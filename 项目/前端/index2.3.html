@@ -387,20 +387,35 @@
     let limit = 15;
 
     // 加载列表
-    function loadList() {
-        let name = document.getElementById('name').value;
-        let idCard = document.getElementById('idCard').value;
-        let specialType = document.getElementById('specialType').value;
-        let careLevel = document.getElementById('careLevel').value;
+   // 替换 index2.3.html 原本的 loadList
+    async function loadList() {
+        try {
+            // 💡 核心对接：调用后端 2.3 接口
+            let response = await fetch('http://127.0.0.1:8000/api/elders/special');
+            let res = await response.json();
+            
+            if (res.code === 200) {
+                // 把后端返回的真实数据覆盖掉原本的 mockData
+                mockData = res.data; 
 
-        let list = mockData.filter(item => {
-            return (name == '' || item.name.includes(name)) &&
-                   (idCard == '' || item.idCard.includes(idCard)) &&
-                   (specialType == '' || item.specialType == specialType) &&
-                   (careLevel == '' || item.careLevel == careLevel);
-        });
-        render(list);
-        renderPage(list.length);
+                // 拿到数据后，保留你原本的搜索和渲染逻辑
+                let name = document.getElementById('name').value;
+                let idCard = document.getElementById('idCard').value;
+                let specialType = document.getElementById('specialType').value;
+                let careLevel = document.getElementById('careLevel').value;
+
+                let list = mockData.filter(item => {
+                    return (name == '' || item.name.includes(name)) &&
+                           (idCard == '' || (item.idCard && item.idCard.includes(idCard))) &&
+                           (specialType == '' || (item.tags && item.tags.includes(specialType))) &&
+                           (careLevel == '' || item.careLevel == careLevel);
+                });
+                render(list);
+                renderPage(list.length);
+            }
+        } catch (error) {
+            console.error("后端没开或者接口报错了：", error);
+        }
     }
 
     // 渲染表格
