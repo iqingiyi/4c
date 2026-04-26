@@ -544,3 +544,469 @@ def get_family_list(elder_name: str = "", db: Session = Depends(get_db)):
             "status": "正常"  # 补充前端需要的状态
         })
     return {"code": 200, "data": result}
+class MedicinePlanData(BaseModel):
+    elder_name: str
+    elder_tag: str = ""
+    drug_name: str
+    drug_type: str = ""
+    dose: str = ""
+    freq: str = ""
+    time: str = ""
+    use_type: str = "long"
+    status: str = "wait"
+    notify: str = "设备+平台+子女"
+    device_status: str = "online"
+    start_time: str = ""
+    end_time: str = ""
+    doctor_advice: str = ""
+    remark: str = ""
+
+
+class MedicineLibraryData(BaseModel):
+    drug_name: str
+    drug_type: str = ""
+    spec: str = ""
+    usage: str = ""
+    contraindication: str = ""
+    remark: str = ""
+
+
+def medicine_to_frontend(item):
+    return {
+        "id": item.id,
+        "elderName": item.elder_name,
+        "elderTag": item.elder_tag,
+        "drugName": item.drug_name,
+        "drugType": item.drug_type,
+        "dose": item.dose,
+        "freq": item.freq,
+        "time": item.time,
+        "useType": item.use_type,
+        "status": item.status,
+        "notify": item.notify,
+        "deviceStatus": item.device_status,
+        "startTime": item.start_time,
+        "endTime": item.end_time,
+        "doctorAdvice": item.doctor_advice,
+        "remark": item.remark,
+    }
+
+
+def seed_medicine_data(db: Session):
+    if db.query(models.MedicinePlan).count() > 0:
+        return
+
+    medicine_pool = [
+        {
+            "drug_name": "硝苯地平缓释片",
+            "drug_type": "降压药",
+            "dose": "10mg",
+            "freq": "每日2次",
+            "time": "08:00,20:00",
+            "doctor_advice": "低盐饮食，规律监测血压。",
+            "remark": "低血压、严重主动脉瓣狭窄慎用。"
+        },
+        {
+            "drug_name": "二甲双胍片",
+            "drug_type": "降糖药",
+            "dose": "0.5g",
+            "freq": "每日2次",
+            "time": "08:30,18:30",
+            "doctor_advice": "餐后服用，注意监测血糖。",
+            "remark": "严重肾功能不全禁用。"
+        },
+        {
+            "drug_name": "阿司匹林肠溶片",
+            "drug_type": "抗血小板药",
+            "dose": "100mg",
+            "freq": "每日1次",
+            "time": "09:00",
+            "doctor_advice": "如有黑便、胃痛需及时上报。",
+            "remark": "活动性消化道出血禁用。"
+        },
+        {
+            "drug_name": "阿托伐他汀钙片",
+            "drug_type": "调脂药",
+            "dose": "20mg",
+            "freq": "每晚1次",
+            "time": "21:00",
+            "doctor_advice": "定期复查肝功能和血脂。",
+            "remark": "活动性肝病慎用。"
+        },
+        {
+            "drug_name": "氯吡格雷片",
+            "drug_type": "抗血小板药",
+            "dose": "75mg",
+            "freq": "每日1次",
+            "time": "09:00",
+            "doctor_advice": "注意皮下出血、牙龈出血等情况。",
+            "remark": "出血风险人群慎用。"
+        },
+        {
+            "drug_name": "奥美拉唑肠溶胶囊",
+            "drug_type": "胃药",
+            "dose": "20mg",
+            "freq": "每日1次",
+            "time": "07:30",
+            "doctor_advice": "早餐前服用。",
+            "remark": "长期使用需关注胃肠反应。"
+        }
+    ]
+
+    elders = db.query(models.Elder).all()
+
+    # 如果 Elder 表还没有数据，就兜底生成 3 条
+    if not elders:
+        fallback_names = [
+            ("张爷爷", "高血压"),
+            ("王奶奶", "糖尿病"),
+            ("刘爷爷", "冠心病"),
+        ]
+        for name, tag in fallback_names:
+            med = random.choice(medicine_pool)
+            db.add(models.MedicinePlan(
+                elder_name=name,
+                elder_tag=tag,
+                drug_name=med["drug_name"],
+                drug_type=med["drug_type"],
+                dose=med["dose"],
+                freq=med["freq"],
+                time=med["time"],
+                use_type="long",
+                status=random.choice(["on", "wait", "off", "delay"]),
+                notify="智能药盒+平台+子女",
+                device_status=random.choice(["online", "online", "offline"]),
+                start_time="2026-04-01",
+                end_time="长期用药",
+                doctor_advice=med["doctor_advice"],
+                remark=med["remark"]
+            ))
+    else:
+        # 给大约 80% 老人生成用药计划
+        for elder in elders:
+            if random.random() > 0.8:
+                continue
+
+            med = random.choice(medicine_pool)
+            db.add(models.MedicinePlan(
+                elder_name=elder.name,
+                elder_tag=elder.special_tags or elder.risk_level or "普通老人",
+                drug_name=med["drug_name"],
+                drug_type=med["drug_type"],
+                dose=med["dose"],
+                freq=med["freq"],
+                time=med["time"],
+                use_type=random.choice(["long", "long", "long", "temp"]),
+                status=random.choices(
+                    ["on", "wait", "off", "delay", "pause"],
+                    weights=[45, 25, 10, 12, 8],
+                    k=1
+                )[0],
+                notify=random.choice(["智能药盒+平台+子女", "平台+护理员", "智能药盒+护理员+子女"]),
+                device_status=random.choices(
+                    ["online", "offline", "error"],
+                    weights=[80, 15, 5],
+                    k=1
+                )[0],
+                start_time=f"2026-04-{random.randint(1, 20):02d}",
+                end_time=random.choice(["长期用药", "2026-05-30", "2026-06-15"]),
+                doctor_advice=med["doctor_advice"],
+                remark=med["remark"]
+            ))
+
+    library = [
+        {
+            "drug_name": "硝苯地平缓释片",
+            "drug_type": "降压药",
+            "spec": "10mg*30片",
+            "usage": "口服，每日1-2次",
+            "contraindication": "低血压、严重主动脉瓣狭窄慎用",
+            "remark": "钙通道阻滞剂"
+        },
+        {
+            "drug_name": "二甲双胍片",
+            "drug_type": "降糖药",
+            "spec": "0.5g*60片",
+            "usage": "餐后口服",
+            "contraindication": "严重肾功能不全禁用",
+            "remark": "双胍类降糖药"
+        },
+        {
+            "drug_name": "阿司匹林肠溶片",
+            "drug_type": "抗血小板药",
+            "spec": "100mg*30片",
+            "usage": "每日一次",
+            "contraindication": "活动性消化道出血禁用",
+            "remark": "抗血小板药"
+        },
+        {
+            "drug_name": "阿托伐他汀钙片",
+            "drug_type": "调脂药",
+            "spec": "20mg*28片",
+            "usage": "每晚一次",
+            "contraindication": "活动性肝病慎用",
+            "remark": "他汀类调脂药"
+        },
+        {
+            "drug_name": "氯吡格雷片",
+            "drug_type": "抗血小板药",
+            "spec": "75mg*28片",
+            "usage": "每日一次",
+            "contraindication": "活动性出血禁用",
+            "remark": "抗血栓常用药"
+        },
+        {
+            "drug_name": "奥美拉唑肠溶胶囊",
+            "drug_type": "胃药",
+            "spec": "20mg*14粒",
+            "usage": "早餐前口服",
+            "contraindication": "对本品过敏者禁用",
+            "remark": "质子泵抑制剂"
+        }
+    ]
+
+    for item in library:
+        db.add(models.MedicineLibrary(**item))
+
+    db.commit()
+def build_medicine_stats(records):
+    total = len(records)
+    wait = sum(1 for item in records if item.status == "wait")
+    off = sum(1 for item in records if item.status == "off")
+    on = sum(1 for item in records if item.status == "on")
+    compliance = round((on / total) * 100, 1) if total else 0
+    return {
+        "total": total,
+        "wait": wait,
+        "off": off,
+        "on": on,
+        "compliance": compliance
+    }
+
+
+@app.get("/api/medicine/list", tags=["用药管理"])
+def get_medicine_list(
+    elderName: str = "",
+    drugType: str = "all",
+    status: str = "all",
+    deviceStatus: str = "all",
+    tagType: str = "all",
+    db: Session = Depends(get_db)
+):
+    seed_medicine_data(db)
+    query = db.query(models.MedicinePlan)
+
+    if elderName:
+        query = query.filter(models.MedicinePlan.elder_name.contains(elderName))
+    if drugType != "all":
+        query = query.filter(models.MedicinePlan.drug_type == drugType)
+    if status != "all":
+        query = query.filter(models.MedicinePlan.status == status)
+    if deviceStatus != "all":
+        query = query.filter(models.MedicinePlan.device_status == deviceStatus)
+
+    records = query.order_by(models.MedicinePlan.id.desc()).all()
+
+    if tagType == "long":
+        records = [item for item in records if item.use_type == "long"]
+    elif tagType == "temp":
+        records = [item for item in records if item.use_type == "temp"]
+    elif tagType == "risk":
+        records = [item for item in records if item.status in ["off", "delay"]]
+    elif tagType == "pause":
+        records = [item for item in records if item.status == "pause"]
+
+    return {
+        "code": 200,
+        "data": [medicine_to_frontend(item) for item in records],
+        "stats": build_medicine_stats(records)
+    }
+
+
+@app.get("/api/medicine/stats", tags=["用药管理"])
+def get_medicine_stats(db: Session = Depends(get_db)):
+    seed_medicine_data(db)
+    records = db.query(models.MedicinePlan).all()
+    return {"code": 200, "data": build_medicine_stats(records)}
+
+
+@app.get("/api/medicine/library/list", tags=["用药管理"])
+def get_medicine_library_list(keyword: str = "", db: Session = Depends(get_db)):
+    seed_medicine_data(db)
+    query = db.query(models.MedicineLibrary)
+    if keyword:
+        query = query.filter(models.MedicineLibrary.drug_name.contains(keyword))
+    records = query.order_by(models.MedicineLibrary.id.desc()).all()
+    return {
+        "code": 200,
+        "data": [
+            {
+                "id": item.id,
+                "drugName": item.drug_name,
+
+                # 兼容前端表格字段
+                "firstCategory": item.drug_type,
+                "secondCategory": item.remark or item.drug_type,
+                "spec": item.spec,
+                "dose": item.spec,
+                "contraindication": item.contraindication,
+                "stock": "充足",
+                "expireDate": "2027-12-31",
+                "status": "正常",
+
+                # 保留原字段
+                "drugType": item.drug_type,
+                "usage": item.usage,
+                "remark": item.remark,
+            }
+            for item in records
+        ]
+    }
+
+
+@app.post("/api/medicine/library", tags=["用药管理"])
+def create_medicine_library(data: MedicineLibraryData, db: Session = Depends(get_db)):
+    item = models.MedicineLibrary(**data.model_dump())
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return {"code": 200, "msg": "药品库新增成功", "data": {"id": item.id}}
+
+
+@app.get("/api/medicine/export", tags=["用药管理"])
+def export_medicine_data(db: Session = Depends(get_db)):
+    from fastapi.responses import Response
+
+    seed_medicine_data(db)
+    records = db.query(models.MedicinePlan).all()
+
+    rows = ["老人姓名,药品名称,药品分类,剂量,频次,时间,状态,设备状态,开始日期,结束日期"]
+    for item in records:
+        rows.append(
+            f"{item.elder_name},{item.drug_name},{item.drug_type},{item.dose},{item.freq},{item.time},{item.status},{item.device_status},{item.start_time},{item.end_time}"
+        )
+
+    csv_data = "\ufeff" + "\n".join(rows)
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=medicine_export.csv"}
+    )
+
+
+@app.get("/api/medicine/ai-summary", tags=["用药管理"])
+def get_medicine_ai_summary(db: Session = Depends(get_db)):
+    seed_medicine_data(db)
+    records = db.query(models.MedicinePlan).all()
+    stats = build_medicine_stats(records)
+    report = (
+        f"全院共有 {stats['total']} 条用药计划，其中待服药 {stats['wait']} 条，"
+        f"漏服 {stats['off']} 条，服药依从率约 {stats['compliance']}%。"
+        "建议对漏服老人进行智能药盒提醒、护理员复核和家属同步通知。"
+    )
+    return {"code": 200, "data": {"report": report}}
+
+
+@app.get("/api/medicine/ai/{plan_id}", tags=["用药管理"])
+def get_medicine_ai(plan_id: int, db: Session = Depends(get_db)):
+    seed_medicine_data(db)
+    item = db.query(models.MedicinePlan).filter(models.MedicinePlan.id == plan_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="未找到用药计划")
+
+    report = (
+        f"{item.elder_name} 当前用药为 {item.drug_name}，分类为 {item.drug_type}，"
+        f"剂量 {item.dose}，频次 {item.freq}。"
+        f"当前状态为 {item.status}，设备状态为 {item.device_status}。"
+        "建议结合老人慢病档案、血压血糖数据和医嘱进行持续监测。"
+    )
+    return {"code": 200, "data": {"report": report}}
+
+
+@app.get("/api/medicine/{plan_id}", tags=["用药管理"])
+def get_medicine_detail(plan_id: int, db: Session = Depends(get_db)):
+    seed_medicine_data(db)
+    item = db.query(models.MedicinePlan).filter(models.MedicinePlan.id == plan_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="未找到用药计划")
+
+    logs = [
+        {"date": "2026-04-25 08:00", "result": "已按时服药", "status": "on"},
+        {"date": "2026-04-25 20:00", "result": "待服药", "status": "wait"},
+        {"date": "2026-04-24 08:00", "result": "智能药盒确认已服药", "status": "on"},
+    ]
+
+    return {"code": 200, "data": medicine_to_frontend(item), "logs": logs}
+
+
+@app.post("/api/medicine", tags=["用药管理"])
+def create_medicine_plan(data: MedicinePlanData, db: Session = Depends(get_db)):
+    item = models.MedicinePlan(**data.model_dump())
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return {"code": 200, "msg": "用药计划新增成功", "data": medicine_to_frontend(item)}
+
+
+@app.put("/api/medicine/{plan_id}", tags=["用药管理"])
+def update_medicine_plan(plan_id: int, data: MedicinePlanData, db: Session = Depends(get_db)):
+    item = db.query(models.MedicinePlan).filter(models.MedicinePlan.id == plan_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="未找到用药计划")
+
+    for key, value in data.model_dump().items():
+        setattr(item, key, value)
+
+    db.commit()
+    db.refresh(item)
+    return {"code": 200, "msg": "用药计划保存成功", "data": medicine_to_frontend(item)}
+
+
+@app.patch("/api/medicine/{plan_id}/status", tags=["用药管理"])
+def update_medicine_status(plan_id: int, status: str, db: Session = Depends(get_db)):
+    item = db.query(models.MedicinePlan).filter(models.MedicinePlan.id == plan_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="未找到用药计划")
+
+    item.status = status
+    db.commit()
+    return {"code": 200, "msg": "状态更新成功"}
+
+
+@app.delete("/api/medicine/{plan_id}", tags=["用药管理"])
+def delete_medicine_plan(plan_id: int, db: Session = Depends(get_db)):
+    item = db.query(models.MedicinePlan).filter(models.MedicinePlan.id == plan_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="未找到用药计划")
+
+    db.delete(item)
+    db.commit()
+    return {"code": 200, "msg": "用药计划删除成功"}
+@app.put("/api/medicine/library/{library_id}", tags=["用药管理"])
+def update_medicine_library(library_id: int, data: MedicineLibraryData, db: Session = Depends(get_db)):
+    item = db.query(models.MedicineLibrary).filter(models.MedicineLibrary.id == library_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="未找到药品库记录")
+
+    update_data = data.model_dump()
+
+    for key, value in update_data.items():
+        if hasattr(item, key):
+            setattr(item, key, value)
+
+    db.commit()
+    db.refresh(item)
+
+    return {
+        "code": 200,
+        "msg": "药品库编辑成功",
+        "data": {
+            "id": item.id,
+            "drugName": item.drug_name,
+            "drugType": item.drug_type,
+            "spec": item.spec,
+            "usage": item.usage,
+            "contraindication": item.contraindication,
+            "remark": item.remark
+        }
+    }

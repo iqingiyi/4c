@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey,Text
 from database import Base
 from datetime import datetime
 
@@ -72,3 +72,34 @@ class ServiceTask(Base):
     priority = Column(String(20))
     status = Column(String(20))
     create_time = Column(DateTime, default=datetime.now)
+class MedicinePlan(Base):
+    __tablename__ = "medicine_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    elder_name = Column(String(50), nullable=False)
+    elder_tag = Column(String(100), default="")
+    drug_name = Column(String(100), nullable=False)
+    drug_type = Column(String(100), default="")
+    dose = Column(String(50), default="")
+    freq = Column(String(100), default="")
+    time = Column(String(100), default="")
+    use_type = Column(String(20), default="long")
+    status = Column(String(20), default="wait")
+    notify = Column(String(100), default="设备+平台+子女")
+    device_status = Column(String(20), default="online")
+    start_time = Column(String(50), default="")
+    end_time = Column(String(50), default="")
+    doctor_advice = Column(Text, default="")
+    remark = Column(Text, default="")
+
+
+class MedicineLibrary(Base):
+    __tablename__ = "medicine_library"
+
+    id = Column(Integer, primary_key=True, index=True)
+    drug_name = Column(String(100), nullable=False)
+    drug_type = Column(String(100), default="")
+    spec = Column(String(100), default="")
+    usage = Column(String(200), default="")
+    contraindication = Column(Text, default="")
+    remark = Column(Text, default="")

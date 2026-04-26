@@ -665,7 +665,10 @@
             const result = await res.json();
 
             dataList = result.data || [];
-            document.getElementById('totalCount').innerText = result.stats?.totalCount ?? dataList.length;
+            const totalCountEl = document.getElementById('totalCount');
+            if (totalCountEl) {
+             totalCountEl.innerText = result.stats?.totalCount ?? dataList.length;
+}
 
             if(dataList.length === 0){
                 document.getElementById('emptyTip').style.display = 'block';
@@ -701,7 +704,10 @@
         document.getElementById('hbp').innerText = stats.hbp ?? 0;
         document.getElementById('high').innerText = stats.high ?? 0;
         document.getElementById('wait').innerText = stats.wait ?? 0;
-        document.getElementById('totalCount').innerText = stats.totalCount ?? dataList.length;
+        const totalCountEl = document.getElementById('totalCount');
+        if (totalCountEl) {
+        totalCountEl.innerText = stats.totalCount ?? dataList.length;
+}
     }
 
     function renderTable(list){
