@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>慢病专项管理 - 智护颐年</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background:#f6f8fc; color:#333; line-height:1.6;
+        }
+        *{transition: all 0.25s ease;}
+
+        .sidebar {
+            width:190px; background:#fff; border-right:1px solid #e5e7eb;
+            height:100vh; position:fixed; left:0; top:0; padding:16px 0;
+            overflow-y:auto; z-index:100;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.06);
+        }
+        .sidebar::-webkit-scrollbar{width:4px;}
+        .sidebar::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:4px;}
+        .logo { padding:0 20px 24px; display:flex; align-items:center; gap:10px; }
+        .logo-icon { width:36px; height:36px; background:linear-gradient(135deg,#3b82f6,#2563eb); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; box-shadow:0 3px 6px rgba(59,130,246,0.25);}
+        .logo-text h1 { font-size:18px; font-weight:600; color:#1f2937; }
+        .logo-text p { font-size:12px; color:#6b7280; }
+        .menu-item {
+            display:flex; align-items:center; gap:12px; padding:12px 20px;
+            color:#4b5563; text-decoration:none; font-size:14px; cursor:pointer;
+        }
+        .menu-item:hover { background:#eff6ff; color:#3b82f6; padding-left:24px; }
+        .menu-item.active { background:#eff6ff; color:#3b82f6; border-right:3px solid #3b82f6; }
+        .menu-item .badge { margin-left:auto; background:#ef4444; color:#fff; font-size:12px; padding:2px 6px; border-radius:10px; }
+        .submenu { display:none; overflow:hidden; background:#f8fafc; }
+        .submenu-item { display:flex; align-items:center; padding:10px 20px 10px 36px; color:#6b7280; text-decoration:none; font-size:13px; }
+        .submenu-item:hover { background:#f1f5f9; color:#3b82f6; padding-left:40px; }
+        .submenu-item.active { color:#3b82f6; font-weight:500; }
+        .menu-arrow { margin-left:auto; font-size:12px; transition:transform 0.2s; }
+        .menu-arrow.open { transform:rotate(90deg); }
+        .ai-assistant {
+            position:sticky; bottom:16px; margin:12px;
+            background:linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border-radius:14px; padding:16px; border:1px solid #bfdbfe;
+            box-shadow:0 4px 12px rgba(59,130,246,0.1);
+        }
+        .ai-assistant h3 { font-size:13.5px; font-weight:700; margin-bottom:3px; color:#1e40af; }
+        .ai-assistant p { font-size:11px; color:#64748b; margin-bottom:10px; }
+        .ai-assistant button {
+            width:100%; background:linear-gradient(135deg,#2563eb,#3b82f6); color:#fff; border:none;
+            border-radius:8px; padding:9px; font-size:12.5px; cursor:pointer; font-weight:600;
+        }
+        .ai-assistant button:hover{transform:scale(1.02);box-shadow:0 3px 8px rgba(37,99,235,0.25);}
+
+        .main-content { margin-left:190px; padding:0; }
+        .top-nav {
+            background:rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+            border-bottom:1px solid #eaeef6; padding:14px 28px;
+            display:flex; align-items:center; justify-content:space-between;
+            position:sticky; top:0; z-index:99;
+        }
+        .nav-left { display:flex; align-items:center; gap:20px; }
+        .nav-menu { display:flex; gap:32px; }
+        .nav-menu a { text-decoration:none; color:#4b5563; font-size:14px; font-weight:500; padding:6px 0; }
+        .nav-menu a.active { color:#3b82f6; border-bottom:2px solid #3b82f6; }
+        .nav-menu a:hover{color:#3b82f6;}
+        .nav-right { display:flex; align-items:center; gap:24px; }
+        .nav-notification { position:relative; font-size:18px; color:#6b7280; cursor:pointer; }
+        .nav-notification:hover{color:#ef4444;}
+        .nav-notification .badge { position:absolute; top:-6px; right:-6px; background:#ef4444; color:#fff; font-size:10px; padding:2px 5px; border-radius:10px; }
+        .nav-time { font-size:14px; color:#4b5563; }
+        .nav-user { display:flex; align-items:center; gap:8px; cursor:pointer; }
+        .nav-user:hover{color:#3b82f6;}
+        .nav-user img { width:34px; height:34px; border-radius:50%; background:#e5e7eb; }
+
+        .content { padding:24px 32px; }
+        .quick-tag-box{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+        .quick-tag{padding:6px 14px;background:#fff;border-radius:20px;font-size:12px;border:1px solid #e5e7eb;cursor:pointer;}
+        .quick-tag.active{background:#3b82f6;color:#fff;border-color:#3b82f6;}
+        .quick-tag:hover{border-color:#3b82f6;}
+
+        .filter-box {
+            background:#fff; border-radius:16px; padding:20px 24px;
+            box-shadow:0 2px 12px rgba(0,0,0,0.05); margin-bottom:20px;
+            display:flex; flex-wrap:wrap; gap:14px; align-items:center;
+        }
+        .filter-item { display:flex; align-items:center; gap:8px; }
+        .filter-item label { font-size:13px; color:#6b7280; white-space:nowrap; }
+        .filter-item select, .filter-item input {
+            padding:8px 14px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px;
+            background:#fafbfc;
+        }
+        .filter-item select:focus,.filter-item input:focus{border-color:#3b82f6;outline:none;background:#fff;}
+        .btn-search { background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; border:none; padding:8px 18px; border-radius:10px; cursor:pointer; }
+        .btn-reset { background:#f3f4f6; color:#4b5563; border:none; padding:8px 18px; border-radius:10px; cursor:pointer; }
+        .btn-add { background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; padding:8px 18px; border-radius:10px; cursor:pointer; }
+        .btn-export { background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; border:none; padding:8px 18px; border-radius:10px; cursor:pointer; }
+        .btn-ai { background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; border:none; padding:8px 18px; border-radius:10px; cursor:pointer; }
+        .btn-batch{background:#64748b;color:#fff;border:none;padding:8px 18px;border-radius:10px;cursor:pointer;}
+        button:hover{transform:translateY(-2px);box-shadow:0 3px 8px rgba(0,0,0,0.1);}
+
+        .stats-row {
+            display:grid; grid-template-columns:repeat(5,1fr); gap:18px; margin-bottom:24px;
+        }
+        .stat-card {
+            background:#fff; border-radius:16px; padding:20px;
+            box-shadow:0 4px 16px rgba(0,0,0,0.05);
+            border-left:5px solid #3b82f6;
+            position:relative;overflow:hidden;
+        }
+        .stat-card.blue { border-left-color:#3b82f6; }
+        .stat-card.green { border-left-color:#10b981; }
+        .stat-card.purple { border-left-color:#8b5cf6; }
+        .stat-card.red { border-left-color:#ef4444; }
+        .stat-card.orange { border-left-color:#f59e0b; }
+        .stat-icon{position:absolute;right:16px;top:18px;font-size:28px;opacity:0.15;}
+        .stat-title { font-size:13px; color:#6b7280; margin-bottom:10px; }
+        .stat-num { font-size:28px; font-weight:700; color:#1f2937; line-height:1.2; }
+        .stat-desc { font-size:12px; color:#6b7280; margin-top:6px; }
+
+        .chart-wrap{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:24px 0;}
+        .chart-card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.05);}
+
+        .table-box {
+            background:#fff; border-radius:16px; padding:24px;
+            box-shadow:0 4px 16px rgba(0,0,0,0.05);
+        }
+        .table-wrap{max-height:420px;overflow:auto;}
+        .table-wrap::-webkit-scrollbar{width:6px;height:6px;}
+        .table-wrap::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+        .table {
+            width:100%; border-collapse:collapse;
+        }
+        .table th {
+            background:#f8fafc; padding:14px 12px; text-align:left;
+            font-size:13px; color:#475569; font-weight:600;
+            border-bottom:1px solid #e5e7eb;
+            position:sticky;top:0;z-index:2;
+        }
+        .table td {
+            padding:14px 12px; font-size:13px; color:#374151;
+            border-bottom:1px solid #f3f4f6;
+        }
+        .table tr:nth-child(even){background:#fafbfc;}
+        .table tr:hover { background:#eff6ff; }
+
+        .tag {
+            padding:4px 10px; border-radius:20px; font-size:11px; font-weight:500;
+            border:none;
+        }
+        .tag-high { background:#fee2e2; color:#dc2626; }
+        .tag-mid { background:#fef3c7; color:#d97706; }
+        .tag-low { background:#d1fae5; color:#059669; }
+        .tag-none { background:#e5e7eb; color:#6b7280; }
+        .tag-multi{background:#e0e7ff;color:#4f46e5;}
+        .tag-old{background:#fef2f2;color:#c53030;}
+
+        .text-red{color:#dc2626;font-weight:500;}
+        .text-orange{color:#d97706;font-weight:500;}
+        .text-green{color:#059669;font-weight:500;}
+        .text-blue{color:#3b82f6;font-weight:500;}
+
+        .table-btn {
+            padding:5px 10px; border-radius:8px; font-size:12px;
+            border:none; cursor:pointer; margin:0 2px;
+        }
+        .btn-view{background:#e0f2fe;color:#0369a1;}
+        .btn-edit { background:#eff6ff; color:#3b82f6; }
+        .btn-del { background:#fee2e2; color:#dc2626; }
+
+        .pagination {
+            margin-top:24px; display:flex; justify-content:center; gap:10px; align-items:center;
+        }
+        .page-item {
+            width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+            background:#fff; border:1px solid #e5e7eb; cursor:pointer; font-size:13px;
+        }
+        .page-item.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
+        .page-item:hover{border-color:#3b82f6;}
+
+        .modal {
+            position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:9999;
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background:#fff; border-radius:18px; padding:28px;
+            max-height:82vh; overflow-y:auto;
+            transform:scale(0.95);opacity:0;transition:all 0.3s ease;
+        }
+        .modal.show .modal-content{transform:scale(1);opacity:1;}
+        .modal-md{width:720px;}
+        .modal-sm{width:560px;}
+        .form-row {
+            margin-bottom:16px;
+        }
+        .form-row label {
+            display:block; font-size:13px; color:#4b5563; margin-bottom:6px; font-weight:500;
+        }
+        .form-row input, .form-row select, .form-row textarea {
+            width:100%; padding:10px 14px; border:1px solid #e5e7eb; border-radius:10px; font-size:13px;background:#fafbfc;
+        }
+        .form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:#3b82f6;outline:none;background:#fff;}
+        .form-btns {
+            display:flex; justify-content:flex-end; gap:12px; margin-top:24px;
+        }
+        .form-btns button {
+            padding:9px 22px; border-radius:10px; border:none; cursor:pointer; font-size:13px;
+        }
+        .btn-cancel { background:#f3f4f6; color:#6b7280; }
+        .btn-save { background:#3b82f6; color:#fff; }
+
+        .empty-tip{text-align:center;padding:60px;color:#9ca3af;font-size:14px;}
+        .follow-tag{font-size:11px;padding:2px 6px;border-radius:4px;}
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-heartbeat"></i></div>
+        <div class="logo-text"><h1>智护颐年</h1><p>智慧养老服务资源调度平台</p></div>
+    </div>
+    <div class="menu">
+        <a href="index.html" class="menu-item"><i class="fa fa-home"></i><span>首页总览</span></a>
+        <div class="menu-item" onclick="toggle(this)"><i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">老人档案管理</a>
+            <a href="#" class="submenu-item">失能等级评估</a>
+            <a href="#" class="submenu-item">特殊老人管理</a>
+        </div>
+
+        <div class="menu-item active" onclick="toggle(this)">
+            <i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow open"></i>
+        </div>
+        <div class="submenu" style="display:block;">
+            <a href="health.html" class="submenu-item">实时健康数据</a>
+            <a href="#" class="submenu-item active">慢病专项管理</a>
+            <a href="medicine.html" class="submenu-item">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item">健康趋势分析</a>
+        </div>
+
+        <a href="#" class="menu-item"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-calendar"></i><span>服务资源调度</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-users"></i><span>人员队伍管理</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-microchip"></i><span>智能设备物联</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-robot"></i><span>AI智慧养老</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-money"></i><span>补贴财务中心</span></a>
+    </div>
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3><p>智能慢病分析建议</p><button onclick="openAiModal()">立即咨询</button>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button style="background:none; border:none; font-size:18px;"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="health.html">实时健康数据</a>
+                <a href="#" class="active">慢病专项管理</a>
+                <a href="medicine.html">用药管理</a>
+                <a href="#">体检记录</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">12</span></div>
+            <div class="nav-time" id="ctime"></div>
+            <div class="nav-user"><img src=""><span>管理员</span></div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="quick-tag-box">
+            <div class="quick-tag active" data-type="all">全部老人</div>
+            <div class="quick-tag" data-type="high">高危慢病</div>
+            <div class="quick-tag" data-type="hbp">高血压</div>
+            <div class="quick-tag" data-type="diabetes">糖尿病</div>
+            <div class="quick-tag" data-type="wait">待复诊</div>
+            <div class="quick-tag" data-type="old">高龄特困</div>
+        </div>
+
+        <div class="filter-box">
+            <div class="filter-item">
+                <label>楼栋/区域</label>
+                <select id="areaType">
+                    <option value="all">全部区域</option>
+                    <option>一号康养楼</option>
+                    <option>二号护理楼</option>
+                    <option>康复中心</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>慢病类型</label>
+                <select id="diseaseType">
+                    <option value="all">全部老人</option>
+                    <option value="none">无痛体质 / 无慢性病</option>
+                    <option value="高血压">高血压</option>
+                    <option value="2型糖尿病">2型糖尿病</option>
+                    <option value="冠心病">冠心病</option>
+                    <option value="脑梗死">脑梗死</option>
+                    <option value="脑出血">脑出血后遗症</option>
+                    <option value="慢阻肺">慢阻肺</option>
+                    <option value="哮喘">支气管哮喘</option>
+                    <option value="类风湿关节炎">类风湿关节炎</option>
+                    <option value="骨质疏松">骨质疏松</option>
+                    <option value="慢性肾病">慢性肾病</option>
+                    <option value="脂肪肝">脂肪肝</option>
+                    <option value="肝硬化">肝硬化</option>
+                    <option value="慢性胃炎">慢性胃炎</option>
+                    <option value="胆结石">胆结石</option>
+                    <option value="痛风">痛风</option>
+                    <option value="高血脂">高血脂</option>
+                    <option value="心律失常">心律失常</option>
+                    <option value="心衰">心力衰竭</option>
+                    <option value="甲亢">甲亢</option>
+                    <option value="甲减">甲减</option>
+                    <option value="腰椎间盘突出">腰椎间盘突出</option>
+                    <option value="颈椎病">颈椎病</option>
+                    <option value="帕金森病">帕金森病</option>
+                    <option value="阿尔茨海默病">阿尔茨海默病</option>
+                    <option value="白内障">白内障</option>
+                    <option value="青光眼">青光眼</option>
+                    <option value="前列腺增生">前列腺增生</option>
+                    <option value="贫血">贫血</option>
+                    <option value="带状疱疹后遗症">带状疱疹后遗症</option>
+                    <option value="骨关节炎">骨关节炎</option>
+                    <option value="多种慢病">多种慢病</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>风险等级</label>
+                <select id="level">
+                    <option value="all">全部</option>
+                    <option value="high">高风险</option>
+                    <option value="mid">中风险</option>
+                    <option value="low">低风险</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>老人姓名</label>
+                <input type="text" id="name" placeholder="输入姓名">
+            </div>
+            <button class="btn-search" onclick="loadList()"><i class="fa fa-search"></i> 搜索</button>
+            <button class="btn-reset" onclick="resetFilter()"><i class="fa fa-refresh"></i> 重置</button>
+            <button class="btn-add" onclick="openAddModal()"><i class="fa fa-plus"></i> 新增慢病档案</button>
+            <button class="btn-batch" onclick="batchOperate()"><i class="fa fa-list-ul"></i> 批量操作</button>
+            <button class="btn-export" onclick="exportExcel()"><i class="fa fa-download"></i> 导出台账</button>
+            <button class="btn-ai" onclick="openGlobalAi()"><i class="fa fa-robot"></i> AI智能分析</button>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card blue">
+                <i class="fa fa-stethoscope stat-icon" style="color:#3b82f6;"></i>
+                <div class="stat-title">慢病老人总数</div>
+                <div class="stat-num" id="total">0</div>
+                <div class="stat-desc">较上月 <span class="text-green">↑12人</span></div>
+            </div>
+            <div class="stat-card green">
+                <i class="fa fa-heart stat-icon" style="color:#10b981;"></i>
+                <div class="stat-title">健康无慢病老人</div>
+                <div class="stat-num" id="noDisease">0</div>
+                <div class="stat-desc">体质良好，常规养护</div>
+            </div>
+            <div class="stat-card purple">
+                <i class="fa fa-ambulance stat-icon" style="color:#8b5cf6;"></i>
+                <div class="stat-title">高血压患病人数</div>
+                <div class="stat-num" id="hbp">0</div>
+                <div class="stat-desc">慢病占比最高</div>
+            </div>
+            <div class="stat-card red">
+                <i class="fa fa-exclamation-circle stat-icon" style="color:#ef4444;"></i>
+                <div class="stat-title">高危风险老人</div>
+                <div class="stat-num" id="high">0</div>
+                <div class="stat-desc">重点24小时监护</div>
+            </div>
+            <div class="stat-card orange">
+                <i class="fa fa-calendar-check-o stat-icon" style="color:#f59e0b;"></i>
+                <div class="stat-title">7日内待复诊</div>
+                <div class="stat-num" id="wait">0</div>
+                <div class="stat-desc">逾期自动预警</div>
+            </div>
+        </div>
+
+        <div class="chart-wrap">
+            <div class="chart-card">
+                <canvas id="diseaseChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <canvas id="riskChart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-box">
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>老人信息</th>
+                            <th>楼栋/区域</th>
+                            <th>慢病类型</th>
+                            <th>风险等级</th>
+                            <th>血压指标</th>
+                            <th>血糖指标</th>
+                            <th>用药依从</th>
+                            <th>随访状态</th>
+                            <th>复诊时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataBody"></tbody>
+                </table>
+            </div>
+            <div id="emptyTip" class="empty-tip" style="display:none;">
+                <i class="fa fa-inbox fa-2x" style="margin-bottom:12px;"></i>
+                <div>暂无匹配的慢病老人数据</div>
+            </div>
+        </div>
+
+        <div class="pagination">
+            <span style="font-size:13px;color:#6b7280;">共<span id="totalCount">0</span>条数据</span>
+            <div class="page-item">上一页</div>
+            <div class="page-item active">1</div>
+            <div class="page-item">2</div>
+            <div class="page-item">下一页</div>
+            <select style="padding:4px 8px;border-radius:6px;border:1px solid #e5e7eb;font-size:12px;">
+                <option>每页10条</option>
+                <option>每页20条</option>
+                <option>每页50条</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="editModal" onclick="closeModalByMask(event)">
+    <div class="modal-content modal-md">
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <h3 style="font-size:18px; font-weight:600;" id="modalTitle">新增老人慢病档案</h3>
+            <button onclick="closeModal()" style="background:none; border:none; cursor:pointer; font-size:18px;color:#6b7280;">×</button>
+        </div>
+        <div>
+            <div class="form-row">
+                <label>老人姓名 <span class="text-red">*</span></label>
+                <input type="text" id="form_name" placeholder="请输入姓名">
+            </div>
+            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div>
+                    <label>年龄 <span class="text-red">*</span></label>
+                    <input type="number" id="form_age" placeholder="请输入年龄">
+                </div>
+                <div>
+                    <label>性别</label>
+                    <select id="form_gender">
+                        <option>男</option>
+                        <option>女</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <label>所属楼栋/区域</label>
+                <select id="form_area">
+                    <option>一号康养楼</option>
+                    <option>二号护理楼</option>
+                    <option>康复中心</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>慢病类型</label>
+                <select id="form_disease">
+                    <option value="none">无痛体质 / 无慢性病</option>
+                    <option value="高血压">高血压</option>
+                    <option value="2型糖尿病">2型糖尿病</option>
+                    <option value="冠心病">冠心病</option>
+                    <option value="脑梗死">脑梗死</option>
+                    <option value="脑出血">脑出血后遗症</option>
+                    <option value="慢阻肺">慢阻肺</option>
+                    <option value="哮喘">支气管哮喘</option>
+                    <option value="类风湿关节炎">类风湿关节炎</option>
+                    <option value="骨质疏松">骨质疏松</option>
+                    <option value="慢性肾病">慢性肾病</option>
+                    <option value="脂肪肝">脂肪肝</option>
+                    <option value="肝硬化">肝硬化</option>
+                    <option value="慢性胃炎">慢性胃炎</option>
+                    <option value="胆结石">胆结石</option>
+                    <option value="痛风">痛风</option>
+                    <option value="高血脂">高血脂</option>
+                    <option value="心律失常">心律失常</option>
+                    <option value="心衰">心力衰竭</option>
+                    <option value="甲亢">甲亢</option>
+                    <option value="甲减">甲减</option>
+                    <option value="腰椎间盘突出">腰椎间盘突出</option>
+                    <option value="颈椎病">颈椎病</option>
+                    <option value="帕金森病">帕金森病</option>
+                    <option value="阿尔茨海默病">阿尔茨海默病</option>
+                    <option value="白内障">白内障</option>
+                    <option value="青光眼">青光眼</option>
+                    <option value="前列腺增生">前列腺增生</option>
+                    <option value="贫血">贫血</option>
+                    <option value="带状疱疹后遗症">带状疱疹后遗症</option>
+                    <option value="骨关节炎">骨关节炎</option>
+                    <option value="多种慢病">多种慢病</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>风险等级</label>
+                <select id="form_level">
+                    <option value="none">无风险</option>
+                    <option value="low">低风险</option>
+                    <option value="mid">中风险</option>
+                    <option value="high">高风险</option>
+                </select>
+            </div>
+            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div>
+                    <label>血压</label>
+                    <input type="text" id="form_bp" placeholder="例：135/85">
+                </div>
+                <div>
+                    <label>血糖(mmol/L)</label>
+                    <input type="text" id="form_sugar">
+                </div>
+            </div>
+            <div class="form-row">
+                <label>用药方案 & 用药依从性</label>
+                <input type="text" id="form_medicine" placeholder="填写长期用药">
+            </div>
+            <div class="form-row">
+                <label>下次复诊日期</label>
+                <input type="date" id="form_next">
+            </div>
+            <div class="form-row">
+                <label>随访状态</label>
+                <select id="form_follow">
+                    <option>待随访</option>
+                    <option>已月度随访</option>
+                    <option>需回访干预</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>既往病史、过敏史、护理重点</label>
+                <textarea id="form_note" rows="3" placeholder="详细记录，用于AI评估与护理参考"></textarea>
+            </div>
+            <div class="form-btns">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-save" onclick="saveData()">保存档案</button>
+                <input type="hidden" id="form_id">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="detailModal" onclick="closeDetailModalByMask(event)">
+    <div class="modal-content modal-sm">
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <h3 style="font-size:18px; font-weight:600;">📋 老人完整慢病档案</h3>
+            <button onclick="closeDetailModal()" style="background:none; border:none; cursor:pointer; font-size:18px;color:#6b7280;">×</button>
+        </div>
+        <div id="detailBox"></div>
+    </div>
+</div>
+
+<div class="modal" id="aiModal" onclick="closeAiModalByMask(event)">
+    <div class="modal-content modal-sm">
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <h3 style="font-size:18px; font-weight:600;"><i class="fa fa-robot" style="color:#8b5cf6;"></i> AI 慢病智能研判</h3>
+            <button onclick="closeAiModal()" style="background:none; border:none; cursor:pointer; font-size:18px;color:#6b7280;">×</button>
+        </div>
+        <div id="aiResult" style="line-height:1.9;font-size:13px;color:#374151;"></div>
+    </div>
+</div>
+
+<script>
+    function toggle(el){
+        const sub = el.nextElementSibling;
+        const arr = el.querySelector('.menu-arrow');
+        sub.style.display = sub.style.display=='block' ? 'none' : 'block';
+        arr.classList.toggle('open');
+    }
+
+    function time(){document.getElementById('ctime').innerText = new Date().toLocaleString();}
+    time(); setInterval(time,1000);
+
+    let dataList = [
+        {id:1,name:'张爷爷',age:73,gender:'男',area:'一号康养楼',disease:'高血压',level:'high',bp:'176/106',sugar:'5.8',medicine:'硝苯地平（规律服药）',follow:'需回访干预',next:'2025-12-28',note:'长期高血压，情绪易激动，严格低盐饮食，禁止熬夜'},
+        {id:2,name:'王奶奶',age:79,gender:'女',area:'二号护理楼',disease:'2型糖尿病',level:'mid',bp:'136/84',sugar:'10.2',medicine:'二甲双胍（规律）',follow:'已月度随访',next:'2025-12-30',note:'2型糖尿病，严控碳水，餐后适当活动'},
+        {id:3,name:'刘爷爷',age:81,gender:'男',area:'一号康养楼',disease:'冠心病',level:'high',bp:'168/102',sugar:'6.1',medicine:'阿司匹林（偶尔漏服）',follow:'待随访',next:'2025-12-26',note:'冠心病史5年，禁止劳累、情绪波动，常备急救药品'},
+        {id:4,name:'陈奶奶',age:75,gender:'女',area:'康复中心',disease:'高血压',level:'low',bp:'128/79',sugar:'5.6',medicine:'氨氯地平（规律）',follow:'已月度随访',next:'2026-01-05',note:'血压控制稳定，日常清淡饮食即可'},
+        {id:5,name:'周爷爷',age:84,gender:'男',area:'二号护理楼',disease:'脑梗死',level:'mid',bp:'142/92',sugar:'5.9',medicine:'氯吡格雷（规律）',follow:'需回访干预',next:'2025-12-27',note:'脑卒中后遗症，行动迟缓，专人陪护，防止跌倒'},
+        {id:6,name:'吴奶奶',age:71,gender:'女',area:'康复中心',disease:'none',level:'none',bp:'126/78',sugar:'5.2',medicine:'无',follow:'已月度随访',next:'',note:'身体健康，无基础慢病，每季度常规体检'},
+        {id:7,name:'郑爷爷',age:76,gender:'男',area:'一号康养楼',disease:'痛风',level:'low',bp:'135/86',sugar:'6.1',medicine:'非布司他（规律）',follow:'待随访',next:'2026-01-15',note:'禁止海鲜、动物内脏、浓汤等高嘌呤食物'},
+        {id:8,name:'杨奶奶',age:80,gender:'女',area:'二号护理楼',disease:'高血脂',level:'mid',bp:'140/88',sugar:'5.7',medicine:'辛伐他汀（偶尔漏服）',follow:'需回访干预',next:'2026-01-10',note:'低脂饮食，减少油腻，每日慢走锻炼'},
+        {id:9,name:'赵爷爷',age:85,gender:'男',area:'康复中心',disease:'多种慢病',level:'high',bp:'170/100',sugar:'7.2',medicine:'氨氯地平+二甲双胍',follow:'需回访干预',next:'2025-12-29',note:'高血压+糖尿病+冠心病，多重慢病，重点监护'},
+    ];
+
+    function formatDate(str){
+        if(!str) return '无需复诊';
+        return str;
+    }
+
+    function getBpText(bp){
+        if(!bp) return '-';
+        let num = parseInt(bp.split('/')[0]);
+        if(num >= 160) return `<span class="text-red">${bp}</span>`;
+        if(num >= 140) return `<span class="text-orange">${bp}</span>`;
+        return `<span class="text-green">${bp}</span>`;
+    }
+    function getSugarText(val){
+        if(!val) return '-';
+        let v = parseFloat(val);
+        if(v >= 8) return `<span class="text-red">${val}</span>`;
+        if(v >= 6.2) return `<span class="text-orange">${val}</span>`;
+        return `<span class="text-green">${val}</span>`;
+    }
+    function getNextText(dateStr){
+        if(!dateStr) return '<span class="text-gray-400">无需复诊</span>';
+        let now = new Date();
+        let next = new Date(dateStr);
+        let diff = Math.ceil((next - now) / (1000*60*60*24));
+        if(diff < 0) return `<span class="text-red">已逾期${Math.abs(diff)}天</span>`;
+        if(diff <=7) return `<span class="text-orange">${diff}天后复诊</span>`;
+        return `<span class="text-green">正常</span>`;
+    }
+    function getFollowStyle(text){
+        if(text.includes('漏服')) return '<span class="follow-tag tag-mid">依从一般</span>';
+        if(text.includes('无')) return '<span class="follow-tag tag-none">无需用药</span>';
+        return '<span class="follow-tag tag-low">依从良好</span>';
+    }
+    function getFollowTag(text){
+        if(text.includes('需回访')) return '<span class="tag tag-high">需回访干预</span>';
+        if(text.includes('待随访')) return '<span class="tag tag-mid">待随访</span>';
+        return '<span class="tag tag-low">已完成随访</span>';
+    }
+
+    function loadList(){
+        const disease = document.getElementById('diseaseType').value;
+        const level = document.getElementById('level').value;
+        const name = document.getElementById('name').value.toLowerCase();
+        const area = document.getElementById('areaType').value;
+
+        let filterData = dataList.filter(item => {
+            const matchName = item.name.toLowerCase().includes(name);
+            const matchDisease = disease === 'all' || item.disease === disease;
+            const matchLevel = level === 'all' || item.level === level;
+            const matchArea = area === 'all' || item.area === area;
+            return matchName && matchDisease && matchLevel && matchArea;
+        });
+
+        filterData.sort((a,b)=>{
+            if(a.level==='high') return -1;
+            if(b.level==='high') return 1;
+            return 0;
+        });
+
+        document.getElementById('totalCount').innerText = filterData.length;
+
+        if(filterData.length === 0){
+            document.getElementById('emptyTip').style.display = 'block';
+            document.getElementById('dataBody').innerHTML = '';
+        }else{
+            document.getElementById('emptyTip').style.display = 'none';
+            renderTable(filterData);
+        }
+        doStats(filterData);
+        initChart(filterData);
+    }
+
+    function renderTable(list){
+        const body = document.getElementById('dataBody');
+        body.innerHTML = '';
+        list.forEach((item, index) => {
+            const levelText = {none:'无风险', high:'高风险', mid:'中风险', low:'低风险'};
+            const levelTag = {none:'none', high:'high', mid:'mid', low:'low'};
+            const diseaseText = item.disease === 'none' ? '无基础慢病' : item.disease;
+            const multiTag = item.disease === "多种慢病" ? `<span class="tag tag-multi">多重慢病</span>` : "";
+
+            body.innerHTML += `
+            <tr>
+                <td>${index+1}</td>
+                <td>
+                    <div>${item.name}</div>
+                    <div style="font-size:12px;color:#6b7280;">${item.age}岁/${item.gender}</div>
+                </td>
+                <td>${item.area}</td>
+                <td>${diseaseText} ${multiTag}</td>
+                <td><span class="tag tag-${levelTag[item.level]}">${levelText[item.level]}</span></td>
+                <td>${getBpText(item.bp)}</td>
+                <td>${getSugarText(item.sugar)}</td>
+                <td>${getFollowStyle(item.medicine)}</td>
+                <td>${getFollowTag(item.follow)}</td>
+                <td>${getNextText(item.next)}</td>
+                <td>
+                    <button class="table-btn btn-view" onclick="viewDetail(${item.id})">查看档案</button>
+                    <button class="table-btn btn-edit" onclick="editItem(${item.id})">编辑</button>
+                    <button class="table-btn btn-del" onclick="delItem(${item.id})">删除</button>
+                </td>
+            </tr>`;
+        });
+    }
+
+    function doStats(list){
+        document.getElementById('total').innerText = list.filter(i=>i.disease!=='none').length;
+        document.getElementById('noDisease').innerText = list.filter(i=>i.disease=='none').length;
+        document.getElementById('hbp').innerText = list.filter(i=>i.disease=='高血压').length;
+        document.getElementById('high').innerText = list.filter(i=>i.level=='high').length;
+        let waitNum = 0;
+        let now = new Date();
+        list.forEach(item=>{
+            if(item.next){
+                let d = new Date(item.next);
+                let diff = Math.ceil((d - now)/(1000*60*60*24));
+                if(diff>=0 && diff<=7) waitNum++;
+            }
+        });
+        document.getElementById('wait').innerText = waitNum;
+    }
+
+    function initChart(list){
+        const diseaseCtx = document.getElementById('diseaseChart').getContext('2d');
+        const diseaseData = [
+            list.filter(x=>x.disease==='高血压').length,
+            list.filter(x=>x.disease==='2型糖尿病').length,
+            list.filter(x=>x.disease==='冠心病').length,
+            list.filter(x=>x.disease==='脑梗死').length,
+            list.filter(x=>x.disease==='高血脂').length,
+            list.filter(x=>!['高血压','2型糖尿病','冠心病','脑梗死','高血脂','none'].includes(x.disease)).length
+        ];
+        new Chart(diseaseCtx,{
+            type:'pie',
+            data:{
+                labels:['高血压','糖尿病','冠心病','脑梗死','高血脂','其他慢病'],
+                datasets:[{data:diseaseData,backgroundColor:['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#10b981','#94a3b8']}]
+            },
+            options:{responsive:true,maintainAspectRatio:true,plugins:{title:{display:true,text:'全院慢病类型分布统计',font:{size:14}}}}
+        })
+
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        const riskData = [
+            list.filter(x=>x.level==='high').length,
+            list.filter(x=>x.level==='mid').length,
+            list.filter(x=>x.level==='low').length,
+            list.filter(x=>x.level==='none').length
+        ];
+        new Chart(riskCtx,{
+            type:'bar',
+            data:{
+                labels:['高风险','中风险','低风险','无风险'],
+                datasets:[{label:'人数',data:riskData,backgroundColor:['#ef4444','#f59e0b','#10b981','#94a3b8']}]
+            },
+            options:{responsive:true,maintainAspectRatio:true,plugins:{title:{display:true,text:'慢病风险等级人数统计',font:{size:14}}}}
+        })
+    }
+
+    function viewDetail(id){
+        let item = dataList.find(x=>x.id===id);
+        if(!item)return;
+        const diseaseText = item.disease === 'none' ? '无基础慢病' : item.disease;
+        let html = `
+        <div style="line-height:1.8;">
+            <div style="padding-bottom:12px;border-bottom:1px solid #eee;margin-bottom:12px;">
+                <div><b>姓名：</b>${item.name}</div>
+                <div><b>年龄/性别：</b>${item.age}岁 / ${item.gender}</div>
+                <div><b>所属楼栋：</b>${item.area}</div>
+            </div>
+            <div><b>确诊慢病：</b>${diseaseText}</div>
+            <div><b>风险等级：</b>${item.level==='high'?'<span class="text-red">高风险</span>':item.level==='mid'?'<span class="text-orange">中风险</span>':item.level==='low'?'<span class="text-green">低风险</span>':'无风险'}</div>
+            <div><b>近期血压：</b>${item.bp||'无记录'}</div>
+            <div><b>近期血糖：</b>${item.sugar||'无记录'}</div>
+            <div><b>长期用药：</b>${item.medicine}</div>
+            <div><b>随访状态：</b>${item.follow}</div>
+            <div><b>复诊计划：</b>${formatDate(item.next)}</div>
+            <div style="margin-top:12px;padding:12px;background:#f8fafc;border-radius:10px;">
+                <b>📝 护理备注 & 既往病史：</b><br>${item.note}</div>
+        </div>
+        `;
+        document.getElementById('detailBox').innerHTML = html;
+        document.getElementById('detailModal').style.display = 'flex';
+        document.getElementById('detailModal').classList.add('show');
+    }
+
+    function batchOperate(){
+        alert('✅ 批量功能已就绪：\n1. 批量修改风险等级\n2. 批量标记随访完成\n3. 批量发送复诊提醒');
+    }
+
+    function exportExcel(){
+        alert('✅ 慢病完整台账导出成功\n包含：老人基础信息、楼栋、慢病、血压血糖、用药、随访、复诊、风险等级');
+    }
+
+    function openGlobalAi(){
+        document.getElementById('aiModal').style.display = 'flex';
+        document.getElementById('aiModal').classList.add('show');
+        document.getElementById('aiResult').innerText = "AI 正在深度分析全院慢病数据，请稍候...";
+        setTimeout(()=>{
+            document.getElementById('aiResult').innerHTML = `
+✅ <b>【全院慢病综合研判报告】</b><br>
+1. 本次统计慢病老人共 <span class="text-blue">${document.getElementById('total').innerText}</span> 人，健康老人 ${document.getElementById('noDisease').innerText} 人；<br>
+2. 高血压为首位高发慢病，占慢病总人数占比最高，需常态化控压管理；<br>
+3. 高危重点老人 <span class="text-red">${document.getElementById('high').innerText}</span> 人，建议落实每日早晚双次生命体征监测；<br>
+4. 近7日待复诊老人 <span class="text-orange">${document.getElementById('wait').innerText}</span> 人，需护理员主动电话+上门随访；<br>
+5. 部分老人存在用药漏服情况，需加强用药提醒与家属协同监管。<br><br>
+
+💡 <b>AI 智能养护建议</b>
+• 心脑血管慢病：低盐低脂、忌情绪激动、防寒保暖；
+• 糖尿病人群：定量三餐、严控甜食、餐后轻度活动；
+• 痛风/三高人群：清淡饮食、忌油腻高嘌呤、规律服药；
+• 高风险人群：建立一对一专属护理台账，重点巡护。
+            `;
+        },1200);
+    }
+
+    function openAiModal(){
+        document.getElementById('aiModal').style.display = 'flex';
+        document.getElementById('aiModal').classList.add('show');
+        document.getElementById('aiResult').innerHTML = `
+💡 可点击列表【查看档案】，自动生成该老人<b>个性化慢病AI护理方案</b><br>
+💡 点击【AI智能分析】可查看全院整体慢病风险预警与统筹建议
+        `;
+    }
+
+    let currentId = null;
+    function openAddModal(){
+        currentId = null;
+        document.getElementById('modalTitle').innerText = '新增老人慢病档案';
+        document.getElementById('editModal').style.display = 'flex';
+        document.getElementById('editModal').classList.add('show');
+        document.querySelectorAll('#editModal input, #editModal textarea, #editModal select').forEach(el=>{
+            if(el.id !== 'form_id') el.value = '';
+        });
+    }
+
+    function editItem(id){
+        currentId = id;
+        const item = dataList.find(i=>i.id === id);
+        if(!item) return;
+        document.getElementById('modalTitle').innerText = '编辑慢病档案';
+        document.getElementById('form_id').value = item.id;
+        document.getElementById('form_name').value = item.name;
+        document.getElementById('form_age').value = item.age;
+        document.getElementById('form_gender').value = item.gender;
+        document.getElementById('form_area').value = item.area;
+        document.getElementById('form_disease').value = item.disease;
+        document.getElementById('form_level').value = item.level;
+        document.getElementById('form_bp').value = item.bp;
+        document.getElementById('form_sugar').value = item.sugar;
+        document.getElementById('form_medicine').value = item.medicine;
+        document.getElementById('form_next').value = item.next;
+        document.getElementById('form_follow').value = item.follow;
+        document.getElementById('form_note').value = item.note;
+        document.getElementById('editModal').style.display = 'flex';
+        document.getElementById('editModal').classList.add('show');
+    }
+
+    function saveData(){
+        const name = document.getElementById('form_name').value.trim();
+        const age = document.getElementById('form_age').value.trim();
+        if(!name || !age){
+            alert('请填写必填项：姓名、年龄');
+            return;
+        }
+        const newItem = {
+            id: currentId || Date.now(),
+            name: name,
+            age: age,
+            gender: document.getElementById('form_gender').value,
+            area: document.getElementById('form_area').value,
+            disease: document.getElementById('form_disease').value,
+            level: document.getElementById('form_level').value,
+            bp: document.getElementById('form_bp').value,
+            sugar: document.getElementById('form_sugar').value,
+            medicine: document.getElementById('form_medicine').value || '无',
+            next: document.getElementById('form_next').value,
+            follow: document.getElementById('form_follow').value,
+            note: document.getElementById('form_note').value
+        };
+        if(currentId){
+            let idx = dataList.findIndex(i=>i.id === currentId);
+            dataList[idx] = newItem;
+        }else{
+            dataList.push(newItem);
+        }
+        closeModal();
+        loadList();
+        alert('✅ 保存成功');
+    }
+
+    function delItem(id){
+        if(!confirm('⚠️ 确定永久删除该老人慢病档案？删除后不可恢复！')) return;
+        dataList = dataList.filter(i=>i.id !== id);
+        loadList();
+        alert('删除成功');
+    }
+
+    function closeModal(){
+        let m = document.getElementById('editModal');
+        m.classList.remove('show');
+        setTimeout(()=>m.style.display='none',300);
+    }
+    function closeDetailModal(){
+        let m = document.getElementById('detailModal');
+        m.classList.remove('show');
+        setTimeout(()=>m.style.display='none',300);
+    }
+    function closeAiModal(){
+        let m = document.getElementById('aiModal');
+        m.classList.remove('show');
+        setTimeout(()=>m.style.display='none',300);
+    }
+
+    function closeModalByMask(e){
+        if(e.target.id === 'editModal') closeModal();
+    }
+    function closeDetailModalByMask(e){
+        if(e.target.id === 'detailModal') closeDetailModal();
+    }
+    function closeAiModalByMask(e){
+        if(e.target.id === 'aiModal') closeAiModal();
+    }
+
+    function resetFilter(){
+        document.getElementById('diseaseType').value = 'all';
+        document.getElementById('level').value = 'all';
+        document.getElementById('name').value = '';
+        document.getElementById('areaType').value = 'all';
+        document.querySelectorAll('.quick-tag').forEach(tag=>tag.classList.remove('active'));
+        document.querySelector('.quick-tag[data-type="all"]').classList.add('active');
+        loadList();
+    }
+
+    document.querySelectorAll('.quick-tag').forEach(tag=>{
+        tag.addEventListener('click',function(){
+            document.querySelectorAll('.quick-tag').forEach(t=>t.classList.remove('active'));
+            this.classList.add('active');
+            let type = this.dataset.type;
+            switch(type){
+                case 'all':
+                    document.getElementById('diseaseType').value='all';
+                    document.getElementById('level').value='all';
+                    break;
+                case 'high':
+                    document.getElementById('level').value='high';
+                    document.getElementById('diseaseType').value='all';
+                    break;
+                case 'hbp':
+                    document.getElementById('diseaseType').value='高血压';
+                    document.getElementById('level').value='all';
+                    break;
+                case 'diabetes':
+                    document.getElementById('diseaseType').value='2型糖尿病';
+                    document.getElementById('level').value='all';
+                    break;
+                case 'wait':
+                    document.getElementById('diseaseType').value='all';
+                    document.getElementById('level').value='all';
+                    break;
+            }
+            loadList();
+        });
+    });
+
+    window.onload = function(){
+        loadList();
+    }
+</script>
+
+</body>
+</html>
