@@ -170,16 +170,6 @@
         .btn-edit { background:#eff6ff; color:#3b82f6; }
         .btn-del { background:#fee2e2; color:#dc2626; }
 
-        .pagination {
-            margin-top:24px; display:flex; justify-content:center; gap:10px; align-items:center;
-        }
-        .page-item {
-            width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center;
-            background:#fff; border:1px solid #e5e7eb; cursor:pointer; font-size:13px;
-        }
-        .page-item.active { background:#3b82f6; color:#fff; border-color:#3b82f6; }
-        .page-item:hover{border-color:#3b82f6;}
-
         .modal {
             position:fixed; top:0; left:0; width:100%; height:100%;
             background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:9999;
@@ -421,18 +411,6 @@
             </div>
         </div>
 
-        <div class="pagination">
-            <span style="font-size:13px;color:#6b7280;">共<span id="totalCount">0</span>条数据</span>
-            <div class="page-item">上一页</div>
-            <div class="page-item active">1</div>
-            <div class="page-item">2</div>
-            <div class="page-item">下一页</div>
-            <select style="padding:4px 8px;border-radius:6px;border:1px solid #e5e7eb;font-size:12px;">
-                <option>每页10条</option>
-                <option>每页20条</option>
-                <option>每页50条</option>
-            </select>
-        </div>
     </div>
 </div>
 
@@ -574,6 +552,31 @@
 </div>
 
 <script>
+    // 后端地址：默认尝试 127.0.0.1 和 localhost，避免浏览器/系统解析差异导致误报
+    const API_CANDIDATES = ["http://127.0.0.1:8000", "http://localhost:8000"];
+    let API_BASE = API_CANDIDATES[0];
+
+    async function apiFetch(path, options = {}){
+        let lastErr = null;
+        for (const base of API_CANDIDATES) {
+            try {
+                const res = await fetch(`${base}${path}`, options);
+                if (!res.ok) throw new Error(`${base}${path} 返回状态码 ${res.status}`);
+                API_BASE = base;
+                return res;
+            } catch (err) {
+                lastErr = err;
+                console.warn("接口尝试失败：", base, err);
+            }
+        }
+        throw lastErr || new Error("无法连接后端接口");
+    }
+    let dataList = [];
+    let currentTagType = "all";
+    let currentId = null;
+    let diseaseChartInstance = null;
+    let riskChartInstance = null;
+
     function toggle(el){
         const sub = el.nextElementSibling;
         const arr = el.querySelector('.menu-arrow');
@@ -584,18 +587,6 @@
     function time(){document.getElementById('ctime').innerText = new Date().toLocaleString();}
     time(); setInterval(time,1000);
 
-    let dataList = [
-        {id:1,name:'张爷爷',age:73,gender:'男',area:'一号康养楼',disease:'高血压',level:'high',bp:'176/106',sugar:'5.8',medicine:'硝苯地平（规律服药）',follow:'需回访干预',next:'2025-12-28',note:'长期高血压，情绪易激动，严格低盐饮食，禁止熬夜'},
-        {id:2,name:'王奶奶',age:79,gender:'女',area:'二号护理楼',disease:'2型糖尿病',level:'mid',bp:'136/84',sugar:'10.2',medicine:'二甲双胍（规律）',follow:'已月度随访',next:'2025-12-30',note:'2型糖尿病，严控碳水，餐后适当活动'},
-        {id:3,name:'刘爷爷',age:81,gender:'男',area:'一号康养楼',disease:'冠心病',level:'high',bp:'168/102',sugar:'6.1',medicine:'阿司匹林（偶尔漏服）',follow:'待随访',next:'2025-12-26',note:'冠心病史5年，禁止劳累、情绪波动，常备急救药品'},
-        {id:4,name:'陈奶奶',age:75,gender:'女',area:'康复中心',disease:'高血压',level:'low',bp:'128/79',sugar:'5.6',medicine:'氨氯地平（规律）',follow:'已月度随访',next:'2026-01-05',note:'血压控制稳定，日常清淡饮食即可'},
-        {id:5,name:'周爷爷',age:84,gender:'男',area:'二号护理楼',disease:'脑梗死',level:'mid',bp:'142/92',sugar:'5.9',medicine:'氯吡格雷（规律）',follow:'需回访干预',next:'2025-12-27',note:'脑卒中后遗症，行动迟缓，专人陪护，防止跌倒'},
-        {id:6,name:'吴奶奶',age:71,gender:'女',area:'康复中心',disease:'none',level:'none',bp:'126/78',sugar:'5.2',medicine:'无',follow:'已月度随访',next:'',note:'身体健康，无基础慢病，每季度常规体检'},
-        {id:7,name:'郑爷爷',age:76,gender:'男',area:'一号康养楼',disease:'痛风',level:'low',bp:'135/86',sugar:'6.1',medicine:'非布司他（规律）',follow:'待随访',next:'2026-01-15',note:'禁止海鲜、动物内脏、浓汤等高嘌呤食物'},
-        {id:8,name:'杨奶奶',age:80,gender:'女',area:'二号护理楼',disease:'高血脂',level:'mid',bp:'140/88',sugar:'5.7',medicine:'辛伐他汀（偶尔漏服）',follow:'需回访干预',next:'2026-01-10',note:'低脂饮食，减少油腻，每日慢走锻炼'},
-        {id:9,name:'赵爷爷',age:85,gender:'男',area:'康复中心',disease:'多种慢病',level:'high',bp:'170/100',sugar:'7.2',medicine:'氨氯地平+二甲双胍',follow:'需回访干预',next:'2025-12-29',note:'高血压+糖尿病+冠心病，多重慢病，重点监护'},
-    ];
-
     function formatDate(str){
         if(!str) return '无需复诊';
         return str;
@@ -603,11 +594,12 @@
 
     function getBpText(bp){
         if(!bp) return '-';
-        let num = parseInt(bp.split('/')[0]);
+        let num = parseInt(String(bp).split('/')[0]);
         if(num >= 160) return `<span class="text-red">${bp}</span>`;
         if(num >= 140) return `<span class="text-orange">${bp}</span>`;
         return `<span class="text-green">${bp}</span>`;
     }
+
     function getSugarText(val){
         if(!val) return '-';
         let v = parseFloat(val);
@@ -615,6 +607,7 @@
         if(v >= 6.2) return `<span class="text-orange">${val}</span>`;
         return `<span class="text-green">${val}</span>`;
     }
+
     function getNextText(dateStr){
         if(!dateStr) return '<span class="text-gray-400">无需复诊</span>';
         let now = new Date();
@@ -624,48 +617,91 @@
         if(diff <=7) return `<span class="text-orange">${diff}天后复诊</span>`;
         return `<span class="text-green">正常</span>`;
     }
+
     function getFollowStyle(text){
+        text = text || '';
         if(text.includes('漏服')) return '<span class="follow-tag tag-mid">依从一般</span>';
         if(text.includes('无')) return '<span class="follow-tag tag-none">无需用药</span>';
         return '<span class="follow-tag tag-low">依从良好</span>';
     }
+
     function getFollowTag(text){
+        text = text || '';
         if(text.includes('需回访')) return '<span class="tag tag-high">需回访干预</span>';
         if(text.includes('待随访')) return '<span class="tag tag-mid">待随访</span>';
         return '<span class="tag tag-low">已完成随访</span>';
     }
 
-    function loadList(){
+    function showBackendError(err){
+        console.error(err);
+        const msg = err && err.message ? err.message : String(err || "未知错误");
+        document.getElementById('emptyTip').style.display = 'block';
+        document.getElementById('emptyTip').innerHTML = `
+            <i class="fa fa-exclamation-triangle fa-2x" style="margin-bottom:12px;color:#ef4444;"></i>
+            <div>后端接口连接失败，不一定是没启动，可能是端口/接口路径/CORS问题</div>
+            <div style="margin-top:8px;font-size:12px;color:#ef4444;">实际错误：${msg}</div>
+            <div style="margin-top:8px;font-size:12px;color:#6b7280;">请在浏览器打开：http://127.0.0.1:8000/api/chronic/list</div>
+            <div style="margin-top:4px;font-size:12px;color:#6b7280;">启动命令：cd eldercare_backend && python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000</div>
+        `;
+    }
+
+    async function loadList(){
         const disease = document.getElementById('diseaseType').value;
         const level = document.getElementById('level').value;
-        const name = document.getElementById('name').value.toLowerCase();
+        const name = document.getElementById('name').value.trim();
         const area = document.getElementById('areaType').value;
 
-        let filterData = dataList.filter(item => {
-            const matchName = item.name.toLowerCase().includes(name);
-            const matchDisease = disease === 'all' || item.disease === disease;
-            const matchLevel = level === 'all' || item.level === level;
-            const matchArea = area === 'all' || item.area === area;
-            return matchName && matchDisease && matchLevel && matchArea;
+        const params = new URLSearchParams({
+            diseaseType: disease,
+            level: level,
+            name: name,
+            area: area,
+            tagType: currentTagType
         });
 
-        filterData.sort((a,b)=>{
-            if(a.level==='high') return -1;
-            if(b.level==='high') return 1;
-            return 0;
-        });
+        try {
+            const res = await apiFetch(`/api/chronic/list?${params.toString()}`);
+            if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+            const result = await res.json();
 
-        document.getElementById('totalCount').innerText = filterData.length;
+            dataList = result.data || [];
+            document.getElementById('totalCount').innerText = result.stats?.totalCount ?? dataList.length;
 
-        if(filterData.length === 0){
-            document.getElementById('emptyTip').style.display = 'block';
-            document.getElementById('dataBody').innerHTML = '';
-        }else{
-            document.getElementById('emptyTip').style.display = 'none';
-            renderTable(filterData);
+            if(dataList.length === 0){
+                document.getElementById('emptyTip').style.display = 'block';
+                document.getElementById('emptyTip').innerHTML = `
+                    <i class="fa fa-inbox fa-2x" style="margin-bottom:12px;"></i>
+                    <div>暂无匹配的慢病老人数据</div>
+                `;
+                document.getElementById('dataBody').innerHTML = '';
+            }else{
+                document.getElementById('emptyTip').style.display = 'none';
+                renderTable(dataList);
+            }
+
+            if(result.stats){
+                renderStats(result.stats);
+            }else{
+                doStats(dataList);
+            }
+
+            if(result.charts){
+                initChartByBackend(result.charts);
+            }else{
+                initChart(dataList);
+            }
+        } catch (err) {
+            showBackendError(err);
         }
-        doStats(filterData);
-        initChart(filterData);
+    }
+
+    function renderStats(stats){
+        document.getElementById('total').innerText = stats.total ?? 0;
+        document.getElementById('noDisease').innerText = stats.noDisease ?? 0;
+        document.getElementById('hbp').innerText = stats.hbp ?? 0;
+        document.getElementById('high').innerText = stats.high ?? 0;
+        document.getElementById('wait').innerText = stats.wait ?? 0;
+        document.getElementById('totalCount').innerText = stats.totalCount ?? dataList.length;
     }
 
     function renderTable(list){
@@ -681,12 +717,12 @@
             <tr>
                 <td>${index+1}</td>
                 <td>
-                    <div>${item.name}</div>
-                    <div style="font-size:12px;color:#6b7280;">${item.age}岁/${item.gender}</div>
+                    <div>${item.name || '-'}</div>
+                    <div style="font-size:12px;color:#6b7280;">${item.age || '-'}岁/${item.gender || '-'}</div>
                 </td>
-                <td>${item.area}</td>
+                <td>${item.area || '-'}</td>
                 <td>${diseaseText} ${multiTag}</td>
-                <td><span class="tag tag-${levelTag[item.level]}">${levelText[item.level]}</span></td>
+                <td><span class="tag tag-${levelTag[item.level] || 'none'}">${levelText[item.level] || '无风险'}</span></td>
                 <td>${getBpText(item.bp)}</td>
                 <td>${getSugarText(item.sugar)}</td>
                 <td>${getFollowStyle(item.medicine)}</td>
@@ -703,9 +739,9 @@
 
     function doStats(list){
         document.getElementById('total').innerText = list.filter(i=>i.disease!=='none').length;
-        document.getElementById('noDisease').innerText = list.filter(i=>i.disease=='none').length;
-        document.getElementById('hbp').innerText = list.filter(i=>i.disease=='高血压').length;
-        document.getElementById('high').innerText = list.filter(i=>i.level=='high').length;
+        document.getElementById('noDisease').innerText = list.filter(i=>i.disease==='none').length;
+        document.getElementById('hbp').innerText = list.filter(i=>i.disease==='高血压').length;
+        document.getElementById('high').innerText = list.filter(i=>i.level==='high').length;
         let waitNum = 0;
         let now = new Date();
         list.forEach(item=>{
@@ -718,8 +754,21 @@
         document.getElementById('wait').innerText = waitNum;
     }
 
+    function destroyCharts(){
+        if(diseaseChartInstance){ diseaseChartInstance.destroy(); diseaseChartInstance = null; }
+        if(riskChartInstance){ riskChartInstance.destroy(); riskChartInstance = null; }
+    }
+
+    function initChartByBackend(charts){
+        const disease = charts.diseaseDistribution || {};
+        const risk = charts.riskDistribution || {};
+        drawCharts(
+            [disease['高血压'] || 0, disease['糖尿病'] || 0, disease['冠心病'] || 0, disease['脑梗死'] || 0, disease['高血脂'] || 0, disease['其他慢病'] || 0],
+            [risk.high || 0, risk.mid || 0, risk.low || 0, risk.none || 0]
+        );
+    }
+
     function initChart(list){
-        const diseaseCtx = document.getElementById('diseaseChart').getContext('2d');
         const diseaseData = [
             list.filter(x=>x.disease==='高血压').length,
             list.filter(x=>x.disease==='2型糖尿病').length,
@@ -728,57 +777,70 @@
             list.filter(x=>x.disease==='高血脂').length,
             list.filter(x=>!['高血压','2型糖尿病','冠心病','脑梗死','高血脂','none'].includes(x.disease)).length
         ];
-        new Chart(diseaseCtx,{
-            type:'pie',
-            data:{
-                labels:['高血压','糖尿病','冠心病','脑梗死','高血脂','其他慢病'],
-                datasets:[{data:diseaseData,backgroundColor:['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#10b981','#94a3b8']}]
-            },
-            options:{responsive:true,maintainAspectRatio:true,plugins:{title:{display:true,text:'全院慢病类型分布统计',font:{size:14}}}}
-        })
-
-        const riskCtx = document.getElementById('riskChart').getContext('2d');
         const riskData = [
             list.filter(x=>x.level==='high').length,
             list.filter(x=>x.level==='mid').length,
             list.filter(x=>x.level==='low').length,
             list.filter(x=>x.level==='none').length
         ];
-        new Chart(riskCtx,{
+        drawCharts(diseaseData, riskData);
+    }
+
+    function drawCharts(diseaseData, riskData){
+        destroyCharts();
+        const diseaseCtx = document.getElementById('diseaseChart').getContext('2d');
+        diseaseChartInstance = new Chart(diseaseCtx,{
+            type:'pie',
+            data:{
+                labels:['高血压','糖尿病','冠心病','脑梗死','高血脂','其他慢病'],
+                datasets:[{data:diseaseData,backgroundColor:['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#10b981','#94a3b8']}]
+            },
+            options:{responsive:true,maintainAspectRatio:true,plugins:{title:{display:true,text:'全院慢病类型分布统计',font:{size:14}}}}
+        });
+
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        riskChartInstance = new Chart(riskCtx,{
             type:'bar',
             data:{
                 labels:['高风险','中风险','低风险','无风险'],
                 datasets:[{label:'人数',data:riskData,backgroundColor:['#ef4444','#f59e0b','#10b981','#94a3b8']}]
             },
             options:{responsive:true,maintainAspectRatio:true,plugins:{title:{display:true,text:'慢病风险等级人数统计',font:{size:14}}}}
-        })
+        });
     }
 
-    function viewDetail(id){
-        let item = dataList.find(x=>x.id===id);
-        if(!item)return;
-        const diseaseText = item.disease === 'none' ? '无基础慢病' : item.disease;
-        let html = `
-        <div style="line-height:1.8;">
-            <div style="padding-bottom:12px;border-bottom:1px solid #eee;margin-bottom:12px;">
-                <div><b>姓名：</b>${item.name}</div>
-                <div><b>年龄/性别：</b>${item.age}岁 / ${item.gender}</div>
-                <div><b>所属楼栋：</b>${item.area}</div>
-            </div>
-            <div><b>确诊慢病：</b>${diseaseText}</div>
-            <div><b>风险等级：</b>${item.level==='high'?'<span class="text-red">高风险</span>':item.level==='mid'?'<span class="text-orange">中风险</span>':item.level==='low'?'<span class="text-green">低风险</span>':'无风险'}</div>
-            <div><b>近期血压：</b>${item.bp||'无记录'}</div>
-            <div><b>近期血糖：</b>${item.sugar||'无记录'}</div>
-            <div><b>长期用药：</b>${item.medicine}</div>
-            <div><b>随访状态：</b>${item.follow}</div>
-            <div><b>复诊计划：</b>${formatDate(item.next)}</div>
-            <div style="margin-top:12px;padding:12px;background:#f8fafc;border-radius:10px;">
-                <b>📝 护理备注 & 既往病史：</b><br>${item.note}</div>
-        </div>
-        `;
-        document.getElementById('detailBox').innerHTML = html;
-        document.getElementById('detailModal').style.display = 'flex';
-        document.getElementById('detailModal').classList.add('show');
+    async function viewDetail(id){
+        try{
+            const res = await apiFetch(`/api/chronic/${id}`);
+            if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+            const result = await res.json();
+            const item = result.data;
+            if(!item) return;
+            const diseaseText = item.disease === 'none' ? '无基础慢病' : item.disease;
+            let html = `
+            <div style="line-height:1.8;">
+                <div style="padding-bottom:12px;border-bottom:1px solid #eee;margin-bottom:12px;">
+                    <div><b>姓名：</b>${item.name}</div>
+                    <div><b>年龄/性别：</b>${item.age}岁 / ${item.gender}</div>
+                    <div><b>所属楼栋：</b>${item.area}</div>
+                </div>
+                <div><b>确诊慢病：</b>${diseaseText}</div>
+                <div><b>风险等级：</b>${item.level==='high'?'<span class="text-red">高风险</span>':item.level==='mid'?'<span class="text-orange">中风险</span>':item.level==='low'?'<span class="text-green">低风险</span>':'无风险'}</div>
+                <div><b>近期血压：</b>${item.bp||'无记录'}</div>
+                <div><b>近期血糖：</b>${item.sugar||'无记录'}</div>
+                <div><b>长期用药：</b>${item.medicine}</div>
+                <div><b>随访状态：</b>${item.follow}</div>
+                <div><b>复诊计划：</b>${formatDate(item.next)}</div>
+                <div style="margin-top:12px;padding:12px;background:#f8fafc;border-radius:10px;">
+                    <b>📝 护理备注 & 既往病史：</b><br>${item.note || '暂无'}</div>
+            </div>`;
+            document.getElementById('detailBox').innerHTML = html;
+            document.getElementById('detailModal').style.display = 'flex';
+            document.getElementById('detailModal').classList.add('show');
+        }catch(err){
+            alert('查看详情失败，请确认后端已启动');
+            console.error(err);
+        }
     }
 
     function batchOperate(){
@@ -786,41 +848,50 @@
     }
 
     function exportExcel(){
-        alert('✅ 慢病完整台账导出成功\n包含：老人基础信息、楼栋、慢病、血压血糖、用药、随访、复诊、风险等级');
+        if(!dataList.length){
+            alert('当前没有可导出的数据');
+            return;
+        }
+        const header = ['姓名','年龄','性别','区域','慢病类型','风险等级','血压','血糖','用药','随访状态','复诊时间','备注'];
+        const rows = dataList.map(i => [i.name,i.age,i.gender,i.area,i.disease,i.level,i.bp,i.sugar,i.medicine,i.follow,i.next,i.note]);
+        const csv = [header, ...rows].map(row => row.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '慢病专项管理台账.csv';
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     function openGlobalAi(){
         document.getElementById('aiModal').style.display = 'flex';
         document.getElementById('aiModal').classList.add('show');
-        document.getElementById('aiResult').innerText = "AI 正在深度分析全院慢病数据，请稍候...";
-        setTimeout(()=>{
-            document.getElementById('aiResult').innerHTML = `
+        document.getElementById('aiResult').innerHTML = `
 ✅ <b>【全院慢病综合研判报告】</b><br>
 1. 本次统计慢病老人共 <span class="text-blue">${document.getElementById('total').innerText}</span> 人，健康老人 ${document.getElementById('noDisease').innerText} 人；<br>
-2. 高血压为首位高发慢病，占慢病总人数占比最高，需常态化控压管理；<br>
+2. 高血压患者 <span class="text-orange">${document.getElementById('hbp').innerText}</span> 人，应重点关注晨起、睡前血压监测；<br>
 3. 高危重点老人 <span class="text-red">${document.getElementById('high').innerText}</span> 人，建议落实每日早晚双次生命体征监测；<br>
 4. 近7日待复诊老人 <span class="text-orange">${document.getElementById('wait').innerText}</span> 人，需护理员主动电话+上门随访；<br>
-5. 部分老人存在用药漏服情况，需加强用药提醒与家属协同监管。<br><br>
-
-💡 <b>AI 智能养护建议</b>
-• 心脑血管慢病：低盐低脂、忌情绪激动、防寒保暖；
-• 糖尿病人群：定量三餐、严控甜食、餐后轻度活动；
-• 痛风/三高人群：清淡饮食、忌油腻高嘌呤、规律服药；
+5. 当前数据已来自后端 /api/chronic/list，可随数据库更新自动变化。<br><br>
+💡 <b>AI 智能养护建议</b><br>
+• 心脑血管慢病：低盐低脂、忌情绪激动、防寒保暖；<br>
+• 糖尿病人群：定量三餐、严控甜食、餐后轻度活动；<br>
+• 痛风/三高人群：清淡饮食、忌油腻高嘌呤、规律服药；<br>
 • 高风险人群：建立一对一专属护理台账，重点巡护。
-            `;
-        },1200);
+        `;
     }
 
     function openAiModal(){
         document.getElementById('aiModal').style.display = 'flex';
         document.getElementById('aiModal').classList.add('show');
         document.getElementById('aiResult').innerHTML = `
-💡 可点击列表【查看档案】，自动生成该老人<b>个性化慢病AI护理方案</b><br>
-💡 点击【AI智能分析】可查看全院整体慢病风险预警与统筹建议
+💡 当前页面已接入后端慢病档案数据。<br>
+💡 可点击列表【查看档案】，查看该老人完整慢病档案。<br>
+💡 点击【AI智能分析】可查看全院整体慢病风险预警与统筹建议。
         `;
     }
 
-    let currentId = null;
     function openAddModal(){
         currentId = null;
         document.getElementById('modalTitle').innerText = '新增老人慢病档案';
@@ -829,41 +900,53 @@
         document.querySelectorAll('#editModal input, #editModal textarea, #editModal select').forEach(el=>{
             if(el.id !== 'form_id') el.value = '';
         });
+        document.getElementById('form_gender').value = '男';
+        document.getElementById('form_area').value = '一号康养楼';
+        document.getElementById('form_disease').value = 'none';
+        document.getElementById('form_level').value = 'none';
+        document.getElementById('form_follow').value = '已月度随访';
     }
 
-    function editItem(id){
+    async function editItem(id){
         currentId = id;
-        const item = dataList.find(i=>i.id === id);
-        if(!item) return;
-        document.getElementById('modalTitle').innerText = '编辑慢病档案';
-        document.getElementById('form_id').value = item.id;
-        document.getElementById('form_name').value = item.name;
-        document.getElementById('form_age').value = item.age;
-        document.getElementById('form_gender').value = item.gender;
-        document.getElementById('form_area').value = item.area;
-        document.getElementById('form_disease').value = item.disease;
-        document.getElementById('form_level').value = item.level;
-        document.getElementById('form_bp').value = item.bp;
-        document.getElementById('form_sugar').value = item.sugar;
-        document.getElementById('form_medicine').value = item.medicine;
-        document.getElementById('form_next').value = item.next;
-        document.getElementById('form_follow').value = item.follow;
-        document.getElementById('form_note').value = item.note;
-        document.getElementById('editModal').style.display = 'flex';
-        document.getElementById('editModal').classList.add('show');
+        try{
+            const res = await apiFetch(`/api/chronic/${id}`);
+            if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+            const result = await res.json();
+            const item = result.data;
+            if(!item) return;
+            document.getElementById('modalTitle').innerText = '编辑慢病档案';
+            document.getElementById('form_id').value = item.id;
+            document.getElementById('form_name').value = item.name || '';
+            document.getElementById('form_age').value = item.age || '';
+            document.getElementById('form_gender').value = item.gender || '男';
+            document.getElementById('form_area').value = item.area || '一号康养楼';
+            document.getElementById('form_disease').value = item.disease || 'none';
+            document.getElementById('form_level').value = item.level || 'none';
+            document.getElementById('form_bp').value = item.bp || '';
+            document.getElementById('form_sugar').value = item.sugar || '';
+            document.getElementById('form_medicine').value = item.medicine || '无';
+            document.getElementById('form_next').value = item.next || '';
+            document.getElementById('form_follow').value = item.follow || '已月度随访';
+            document.getElementById('form_note').value = item.note || '';
+            document.getElementById('editModal').style.display = 'flex';
+            document.getElementById('editModal').classList.add('show');
+        }catch(err){
+            alert('读取档案失败，请确认后端已启动');
+            console.error(err);
+        }
     }
 
-    function saveData(){
+    async function saveData(){
         const name = document.getElementById('form_name').value.trim();
         const age = document.getElementById('form_age').value.trim();
         if(!name || !age){
             alert('请填写必填项：姓名、年龄');
             return;
         }
-        const newItem = {
-            id: currentId || Date.now(),
+        const payload = {
             name: name,
-            age: age,
+            age: Number(age),
             gender: document.getElementById('form_gender').value,
             area: document.getElementById('form_area').value,
             disease: document.getElementById('form_disease').value,
@@ -875,22 +958,37 @@
             follow: document.getElementById('form_follow').value,
             note: document.getElementById('form_note').value
         };
-        if(currentId){
-            let idx = dataList.findIndex(i=>i.id === currentId);
-            dataList[idx] = newItem;
-        }else{
-            dataList.push(newItem);
+        try{
+            const url = currentId ? `${API_BASE}/api/chronic/${currentId}` : `${API_BASE}/api/chronic`;
+            const method = currentId ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+            const result = await res.json();
+            closeModal();
+            await loadList();
+            alert(result.msg || '保存成功');
+        }catch(err){
+            alert('保存失败，请确认后端已启动且接口正常');
+            console.error(err);
         }
-        closeModal();
-        loadList();
-        alert('✅ 保存成功');
     }
 
-    function delItem(id){
+    async function delItem(id){
         if(!confirm('⚠️ 确定永久删除该老人慢病档案？删除后不可恢复！')) return;
-        dataList = dataList.filter(i=>i.id !== id);
-        loadList();
-        alert('删除成功');
+        try{
+            const res = await apiFetch(`/api/chronic/${id}`, {method:'DELETE'});
+            if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+            const result = await res.json();
+            await loadList();
+            alert(result.msg || '删除成功');
+        }catch(err){
+            alert('删除失败，请确认后端已启动且接口正常');
+            console.error(err);
+        }
     }
 
     function closeModal(){
@@ -924,6 +1022,7 @@
         document.getElementById('level').value = 'all';
         document.getElementById('name').value = '';
         document.getElementById('areaType').value = 'all';
+        currentTagType = 'all';
         document.querySelectorAll('.quick-tag').forEach(tag=>tag.classList.remove('active'));
         document.querySelector('.quick-tag[data-type="all"]').classList.add('active');
         loadList();
@@ -933,28 +1032,20 @@
         tag.addEventListener('click',function(){
             document.querySelectorAll('.quick-tag').forEach(t=>t.classList.remove('active'));
             this.classList.add('active');
-            let type = this.dataset.type;
-            switch(type){
-                case 'all':
-                    document.getElementById('diseaseType').value='all';
-                    document.getElementById('level').value='all';
-                    break;
-                case 'high':
-                    document.getElementById('level').value='high';
-                    document.getElementById('diseaseType').value='all';
-                    break;
-                case 'hbp':
-                    document.getElementById('diseaseType').value='高血压';
-                    document.getElementById('level').value='all';
-                    break;
-                case 'diabetes':
-                    document.getElementById('diseaseType').value='2型糖尿病';
-                    document.getElementById('level').value='all';
-                    break;
-                case 'wait':
-                    document.getElementById('diseaseType').value='all';
-                    document.getElementById('level').value='all';
-                    break;
+            currentTagType = this.dataset.type || 'all';
+
+            if(currentTagType === 'hbp'){
+                document.getElementById('diseaseType').value='高血压';
+                document.getElementById('level').value='all';
+            }else if(currentTagType === 'diabetes'){
+                document.getElementById('diseaseType').value='2型糖尿病';
+                document.getElementById('level').value='all';
+            }else if(currentTagType === 'high'){
+                document.getElementById('diseaseType').value='all';
+                document.getElementById('level').value='high';
+            }else{
+                document.getElementById('diseaseType').value='all';
+                document.getElementById('level').value='all';
             }
             loadList();
         });
@@ -964,6 +1055,7 @@
         loadList();
     }
 </script>
+
 
 </body>
 </html>

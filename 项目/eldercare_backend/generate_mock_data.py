@@ -55,7 +55,6 @@ def generate_data():
 
     # 生成 100 个老人
     for i in range(1, 101):
-        # 💡 为 2.3 生成随机特殊标签（30%的老人有特殊标签）
         tags = ""
         if random.random() < 0.3:
             tags = ",".join(random.sample(special_tag_pool, random.randint(1, 3)))
@@ -73,12 +72,11 @@ def generate_data():
             balance=round(random.uniform(500, 5000), 2),
             subsidy_standard=random.choice([300, 500, 800]),
             total_consumption=round(random.uniform(100, 2000), 2),
-            special_tags=tags  # 💡 写入数据库
+            special_tags=tags
         )
         db.add(elder)
-        db.commit()  # 先提交拿到 elder.id
+        db.commit()
 
-        # 💡 为 2.4 生成家属绑定记录（80%的老人有家属绑定）
         if random.random() < 0.8:
             fam = FamilyMember(
                 elder_id=elder.id,
@@ -89,7 +87,9 @@ def generate_data():
             )
             db.add(fam)
 
-    # 为 100 个老人同步生成慢病专项档案
+    db.commit()
+
+    # 注意：这一段必须在 for i in range(1, 101) 外面
     disease_pool = [
         ("高血压", "high", "165/98", "5.8", "硝苯地平（规律服药）"),
         ("2型糖尿病", "mid", "136/84", "10.2", "二甲双胍（规律）"),
