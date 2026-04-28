@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电子围栏全域监管 - 智护颐年民政智慧养老监管平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #333; }
+        
+        /* 侧边栏统一样式 */
+        .sidebar {
+            width: 190px;
+            background-color: #fff;
+            border-right: 1px solid #e5e7eb;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 16px 0;
+            overflow-y: auto;
+            z-index: 100;
+            transition: width 0.3s ease;
+        }
+        .sidebar.collapse { width: 64px; }
+        .sidebar.collapse .logo-text,
+        .sidebar.collapse .menu-item span,
+        .sidebar.collapse .menu-arrow,
+        .sidebar.collapse .ai-assistant { display: none; }
+        .sidebar.collapse .menu-item { justify-content: center; }
+
+        .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background: #3b83f66c; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+        .logo-text h1 { font-size: 18px; font-weight: 600; color: #1f2937; }
+        .logo-text p { font-size: 12px; color: #6b7280; }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: #4b5563;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .menu-item:hover { background-color: #eff6ff; color: #3b83f69e; }
+        .menu-item.active { background-color: #eff6ff; color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .menu-item .badge {
+            margin-left: auto;
+            background-color: #ef44449d;
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .submenu { display: none; overflow: hidden; }
+        .submenu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px 10px 36px;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .submenu-item:hover { background-color: #f9fafb; color: #3b82f6; }
+        .submenu-item.active { color: #3b82f6; font-weight: 500; }
+
+        .menu-arrow { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+        .menu-arrow.open { transform: rotate(90deg); }
+
+        /* AI助手卡片 */
+        .ai-assistant {
+            position: sticky;
+            bottom: 16px;
+            margin: 12px;
+            background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border-radius: 14px;
+            padding: 16px;
+            border: 1px solid #bfdbfe;
+        }
+        .ai-assistant h3 {
+            font-size: 13.5px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: #1e40af;
+        }
+        .ai-assistant p {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+        .ai-assistant button {
+            width: 100%;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 9px;
+            font-size: 12.5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .ai-assistant button:hover { background-color: #1d4ed8; }
+
+        .main-content { margin-left: 190px; transition: margin 0.3s; }
+        .main-content.collapse { margin-left: 64px; }
+
+        /* 顶部导航 */
+        .top-nav {
+            background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .nav-menu { display: flex; gap: 32px; }
+        .nav-menu a { text-decoration: none; color: #4b5563; font-size: 14px; font-weight: 500; padding: 6px 0; }
+        .nav-menu a.active { color: #3b83f685; border-bottom: 2px solid #3b83f683; }
+        .nav-right { display: flex; align-items: center; gap: 24px; }
+        .nav-notification { position: relative; font-size: 18px; color: #6b7280; }
+        .nav-notification .badge { position: absolute; top: -6px; right: -6px; background: #ef444486; color: #fff; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
+        .nav-time { font-size: 14px; color: #4b5563; }
+        .nav-weather { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #6b72808a; }
+        .nav-user { display: flex; align-items: center; gap: 8px; cursor: pointer; position: relative; }
+        .nav-user img { width: 32px; height: 32px; border-radius: 50%; background: #e5e7eb; }
+        .user-dropdown { position: absolute; right: 0; top: 110%; width: 140px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 999; }
+        .user-dropdown-item { padding: 10px 12px; font-size: 14px; cursor: pointer; }
+        .user-dropdown-item:hover { background:#f3f4f6; }
+
+        .content-container { padding: 20px 24px; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-box { background: #fff; border-radius: 12px; padding: 24px; min-width: 480px; }
+        .point-tip { position: absolute; background: #fff; padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-size: 12px; display: none; z-index: 99; }
+        .tag-blue { background: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .tag-wait { background: #fff3e0; color: #f59f0bb1; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .tag-refuse { background: #ffebee; color: #dc2626b3; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .tag-danger {background:#fee2e2;color:#dc26269e;padding:2px 8px;border-radius:4px;font-size:12px;}
+        .tag-success {background:#ecfdf5;color:#059668a9;padding:2px 8px;border-radius:4px;font-size:12px;}
+        .alarm-red { animation: blink 1s infinite; }
+        @keyframes blink { 0%{opacity:1;} 50%{opacity:0.4;} 100%{opacity:1;} }
+        #mapBox { position: relative; background: #f8fafc; background-image: linear-gradient(rgba(220,220,220,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(220,220,220,0.1) 1px, transparent 1px); background-size: 20px 20px; user-select: none; }
+        .fence-item { position: absolute; z-index: 5; }
+        .fence-vertex {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #1e40af;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            cursor: move;
+            z-index: 15;
+            transform: translate(-50%,-50%);
+        }
+        .map-point{
+            width:12px;
+            height:12px;
+            background:#059669;
+            border:3px solid #1e40af;
+            border-radius:50%;
+            position:absolute;
+            transform:translate(-50%,-50%);
+            cursor:pointer;
+            z-index:20
+        }
+        .map-point.alarm{background:#dc2626a4;border-color:#dc262683;animation:blink 1s infinite}
+        .map-point-high{background:#f59f0bae;border-color:#f59f0b77;}
+        .tab-item.active { color:#1e40afab; border-bottom:2px solid #1e40afa1; }
+        /* 政务新增样式 */
+        .filter-bar{background:#fff;padding:12px;border-radius:6px;margin-bottom:16px;}
+        .stat-card{border-left:4px solid #1e40af9e;}
+        .stat-card-danger{border-left:4px solid #dc26269e;}
+        .stat-card-warning{border-left:4px solid #f59f0b95;}
+        .stat-card-success{border-left:4px solid #05966894;}
+        .urgent-top{background:#fee2e2;border-left:4px solid #dc2626a2;padding:8px;border-radius:4px;margin-bottom:10px;}
+    </style>
+</head>
+<body>
+
+<!-- 侧边栏导航 -->
+<div class="sidebar" id="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-cloud"></i></div>
+        <div class="logo-text">
+            <h1>智护颐年</h1>
+            <p>智慧养老服务资源调度平台</p>
+        </div>
+    </div>
+    <div class="menu">
+        <a href="#" class="menu-item"><i class="fa fa-home"></i><span>首页总览</span></a>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="index2.1.html" class="submenu-item">老人档案管理</a>
+            <a href="index2.2.html" class="submenu-item">失能等级评估</a>
+            <a href="index2.3.html" class="submenu-item">特殊老人管理</a>
+            <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
+            <a href="#" class="submenu-item">老人台账统计</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时健康数据</a>
+            <a href="#" class="submenu-item">实时预警中心</a>
+            <a href="#" class="submenu-item">慢病专项管理</a>
+            <a href="#" class="submenu-item">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item">健康趋势分析</a>
+        </div>
+
+        <div class="menu-item active" onclick="toggleSubmenu(this)"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow open"></i></div>
+        <div class="submenu" style="display:block;">
+            <a href="#" class="submenu-item">实时告警中心</a>
+            <a href="#" class="submenu-item">跌倒/离床预警</a>
+            <a href="#" class="submenu-item active">电子围栏管控</a>
+            <a href="#" class="submenu-item">居家安防预警</a>
+            <a href="#" class="submenu-item">预警处置闭环</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">工单智能派单</a>
+            <a href="#" class="submenu-item">上门服务管理</a>
+            <a href="#" class="submenu-item">照护计划定制</a>
+            <a href="#" class="submenu-item">服务评价管理</a>
+            <a href="#" class="submenu-item">服务时长监管</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">护理人员档案</a>
+            <a href="#" class="submenu-item">排班考勤管理</a>
+            <a href="#" class="submenu-item">资质证书管理</a>
+            <a href="#" class="submenu-item">绩效考核管理</a>
+            <a href="#" class="submenu-item">培训学习管理</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">设备统一接入</a>
+            <a href="#" class="submenu-item">穿戴设备监控</a>
+            <a href="#" class="submenu-item">居家智能硬件</a>
+            <a href="#" class="submenu-item">设备故障报修</a>
+            <a href="#" class="submenu-item">设备数据统计</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">AI健康研判</a>
+            <a href="#" class="submenu-item">AI智能派单</a>
+            <a href="#" class="submenu-item">反诈智能防护</a>
+            <a href="#" class="submenu-item">情绪AI识别</a>
+            <a href="#" class="submenu-item">智能营养配餐</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">高龄补贴审核</a>
+            <a href="#" class="submenu-item">护理补贴发放</a>
+            <a href="#" class="submenu-item">服务费用管理</a>
+            <a href="#" class="submenu-item">财务对账报表</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heart"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">上门探访记录</a>
+            <a href="#" class="submenu-item">心理慰藉服务</a>
+            <a href="#" class="submenu-item">社区活动管理</a>
+            <a href="#" class="submenu-item">节日慰问关怀</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">全域养老看板</a>
+            <a href="#" class="submenu-item">人口结构分析</a>
+            <a href="#" class="submenu-item">风险分布统计</a>
+            <a href="#" class="submenu-item">民政上报报表</a>
+        </div>
+
+        <a href="#" class="menu-item"><i class="fa fa-envelope"></i><span>消息通知中心</span><span class="badge">8</span></a>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">区域组织管理</a>
+            <a href="#" class="submenu-item">账号角色管理</a>
+            <a href="#" class="submenu-item">菜单权限配置</a>
+            <a href="#" class="submenu-item">系统字典配置</a>
+            <a href="#" class="submenu-item">操作日志查询</a>
+            <a href="#" class="submenu-item">数据备份恢复</a>
+        </div>
+    </div>
+
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3>
+        <p>为您提供智能决策建议</p>
+        <button>立即咨询</button>
+        <i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i>
+    </div>
+</div>
+
+<div class="main-content" id="mainContent">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button id="collapseBtn" style="background:none; border:none; font-size:18px; color:#6b7280; margin-right:16px;"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="index1.html">首页</a>
+                <a href="index4.1.html">安全风险预警</a>
+                <a href="index4.2.html">跌倒/离床预警</a>
+                <a href="index4.3.html" class="active">电子围栏监控</a>
+                <a href="index4.4.html">居家安防预警</a>
+                <a href="index4.5.html">预警处置闭环</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">12</span></div>
+            <div class="nav-time" id="currentTime"></div>
+            <div class="nav-weather"><i class="fa fa-sun-o"></i><span>26℃ 多云</span></div>
+            <div class="nav-user" id="userBtn">
+                <img src="https://picsum.photos/id/1005/32/32">
+                <span>管理员 <i class="fa fa-angle-down"></i></span>
+                <div class="user-dropdown" id="userDrop">
+                    <div class="user-dropdown-item">修改密码</div>
+                    <div class="user-dropdown-item" onclick="loginOut()">退出登录</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="content-container">
+        <!-- 政务三级区域筛选栏 -->
+        <div class="filter-bar flex flex-wrap gap-3 items-center">
+            <select class="border rounded px-2 py-1.5 text-sm">
+                <option>全部辖区</option>
+                <option>城东街道</option>
+                <option>城西街道</option>
+                <option>城北街道</option>
+            </select>
+            <select class="border rounded px-2 py-1.5 text-sm">
+                <option>全部社区</option>
+                <option>幸福社区</option>
+                <option>惠民社区</option>
+                <option>安居社区</option>
+            </select>
+            <select class="border rounded px-2 py-1.5 text-sm">
+                <option>全部网格员</option>
+                <option>责任网格员A</option>
+                <option>责任网格员B</option>
+            </select>
+            <select class="border rounded px-2 py-1.5 text-sm">
+                <option>全部告警等级</option>
+                <option>一级紧急告警</option>
+                <option>二级管控告警</option>
+                <option>三级常规预警</option>
+            </select>
+            <input placeholder="重点人员/围栏名称检索" id="searchKey" class="border px-3 py-1.5 rounded text-sm flex-1 max-w-xs">
+            <button onclick="searchData()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">筛选查询</button>
+            <button onclick="exportGovReport()" class="bg-gray-500 text-white px-3 py-1.5 rounded text-sm">民政台账导出</button>
+            <button onclick="batchFenceOperate()" class="bg-gray-400 text-white px-3 py-1.5 rounded text-sm">批量管控</button>
+        </div>
+
+        <!-- 政务统计卡片 -->
+        <div class="grid grid-cols-4 gap-5 mb-5">
+            <div class="bg-white p-4 rounded shadow stat-card"><div class="text-xs text-gray-500">今日全域隐患告警</div><div class="text-xl font-bold" id="totalAlarm">0</div></div>
+            <div class="bg-white p-4 rounded shadow stat-card-danger"><div class="text-xs text-gray-500">一级紧急督办工单</div><div class="text-xl font-bold text-red-500" id="highAlarm">0</div></div>
+            <div class="bg-white p-4 rounded shadow stat-card-success"><div class="text-xs text-gray-500">已闭环处置隐患</div><div class="text-xl font-bold text-green-500" id="dealAlarm">0</div></div>
+            <div class="bg-white p-4 rounded shadow stat-card-warning"><div class="text-xs text-gray-500">全域安防围栏总数</div><div class="text-xl font-bold text-blue-800" id="totalFence">0</div></div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6">
+            <div class="col-span-2 bg-white rounded-lg shadow overflow-hidden">
+                <div class="flex justify-between p-4 border-b">
+                    <h2 class="font-semibold">电子围栏全域一张图监管</h2>
+                    <div class="flex gap-2">
+                        <button onclick="startDraw()" class="px-3 py-1.5 border rounded">绘制安防管控区域</button>
+                        <button onclick="clearAllFence()" class="px-3 py-1.5 border rounded">清空临时绘制区域</button>
+                        <button onclick="openTrackModal()" class="px-3 py-1.5 border rounded">人员轨迹溯源回放</button>
+                        <button onclick="openFenceModal()" class="px-3 py-1.5 bg-blue-600 text-white rounded">新增政务安防围栏</button>
+                    </div>
+                </div>
+                <div id="mapBox" class="w-full h-[520px] relative">
+                    <svg id="fenceSvg" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:8;"></svg>
+                    <div class="point-tip" id="pointTip"></div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <div class="flex border-b">
+                    <button class="tab-item active flex-1 py-3" data-tab="alarm">隐患告警督办</button>
+                    <button class="tab-item flex-1 py-3" data-tab="fence">安防围栏台账</button>
+                </div>
+                <div class="h-[520px] overflow-y-auto p-4">
+                    <div class="tab-content" id="alarm">
+                        <div class="urgent-top"><i class="fa fa-exclamation-circle text-red-500"></i> 超时未处置工单将自动升级至街道督办</div>
+                        <div id="alarmList" class="space-y-3"></div>
+                    </div>
+                    <div class="tab-content hidden" id="fence">
+                        <div class="space-y-3 mb-4">
+                            <input id="fenceName" placeholder="安防围栏名称" class="w-full border rounded p-2">
+                            <select id="fenceType" class="w-full border rounded p-2">
+                                <option value="1">安全活动管控区</option>
+                                <option value="2">限制出入管控区</option>
+                                <option value="3">高危禁止禁区</option>
+                            </select>
+                            <select id="fenceArea" class="w-full border rounded p-2">
+                                <option>所属辖区：幸福社区</option>
+                                <option>所属辖区：惠民社区</option>
+                                <option>所属辖区：安居社区</option>
+                            </select>
+                            <input placeholder="责任网格员" class="w-full border rounded p-2">
+                            <button onclick="saveFence()" class="w-full bg-blue-800 text-white p-2 rounded">录入围栏管控台账</button>
+                        </div>
+                        <div id="fenceList" class="border-t pt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 数据分析图表（4种不同类型 横排缩小） -->
+<div class="grid grid-cols-4 gap-4 mt-5">
+    <div class="bg-white p-3 rounded shadow">
+        <h3 class="text-xs mb-2">隐患类型占比</h3>
+        <canvas id="chart1" height="150"></canvas>
+    </div>
+    <div class="bg-white p-3 rounded shadow">
+        <h3 class="text-xs mb-2">安全风险雷达</h3>
+        <canvas id="chart2" height="150"></canvas>
+    </div>
+    <div class="bg-white p-3 rounded shadow">
+        <h3 class="text-xs mb-2">隐患趋势曲线图</h3>
+        <canvas id="chart3" height="150"></canvas>
+    </div>
+    <div class="bg-white p-3 rounded shadow">
+        <h3 class="text-xs mb-2">各街道隐患统计</h3>
+        <canvas id="chart4" height="150"></canvas>
+    </div>
+</div>
+        <!-- 新增：网格员考核统计 -->
+        <div class="bg-white p-4 rounded shadow mt-5">
+            <h3 class="text-sm font-semibold mb-3">基层网格员隐患处置考核统计</h3>
+            <div class="grid grid-cols-3 gap-4 text-sm">
+                <div class="border p-3 rounded"><div class="text-gray-500">网格员平均处置时效</div><div class="font-bold mt-1">28 分钟</div></div>
+                <div class="border p-3 rounded"><div class="text-gray-500">隐患闭环完成率</div><div class="font-bold text-green-600 mt-1">96.8%</div></div>
+                <div class="border p-3 rounded"><div class="text-gray-500">月度超时督办次数</div><div class="font-bold text-red-500 mt-1">3 次</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 隐患督办处置弹窗（政务闭环版） -->
+<div class="modal" id="dealModal">
+    <div class="modal-box">
+        <h4 class="mb-3 font-semibold">安全隐患督办处置归档</h4>
+        <input type="hidden" id="dealId">
+        <div class="mb-2">
+            <label class="text-sm text-gray-600">隐患处置结果</label>
+            <select id="dealResult" class="w-full border rounded p-2 mt-1">
+                <option>现场核查处置完成</option>
+                <option>设备信号误报核销</option>
+                <option>已联系监护人告知</option>
+                <option>移交街道统筹处置</option>
+                <option>特殊情况延期处置</option>
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="text-sm text-gray-600">现场处置说明</label>
+            <textarea id="dealRemark" class="w-full border rounded p-2 mt-1 mb-2" placeholder="填写处置过程、现场情况、整改措施、后续管控方案"></textarea>
+        </div>
+        <div class="mb-3">
+            <label class="text-sm text-gray-600">处置佐证（留痕归档）</label>
+            <input type="file" class="w-full border rounded p-2 mt-1">
+        </div>
+        <div class="flex justify-end gap:2">
+            <button onclick="closeDealModal()" class="border px-3 py-1 rounded">取消</button>
+            <button onclick="submitDeal()" class="bg-blue-800 text-white px-3 py-1 rounded">提交归档闭环</button>
+        </div>
+    </div>
+</div>
+
+<!-- 围栏新增/编辑政务台账弹窗 -->
+<div class="modal" id="fenceModal">
+    <div class="modal-box">
+        <h4 class="mb-3 font-semibold">安防围栏台账新增/编辑</h4>
+        <input id="editId" type="hidden">
+        <input id="newFenceName" class="w-full border rounded p-2 mb-2" placeholder="管控围栏名称">
+        <select id="newFenceType" class="w-full border rounded p-2 mb-2">
+            <option value="1">安全活动管控区</option>
+            <option value="2">限制出入管控区</option>
+            <option value="3">高危禁止禁区</option>
+        </select>
+        <select class="w-full border rounded p-2 mb-2">
+            <option>所属街道：城东街道</option>
+            <option>所属街道：城西街道</option>
+        </select>
+        <select class="w-full border rounded p-2 mb-2">
+            <option>责任社区：幸福社区</option>
+            <option>责任社区：惠民社区</option>
+        </select>
+        <input placeholder="分管责任人" class="w-full border rounded p-2 mb-2">
+        <input placeholder="联系电话" class="w-full border rounded p-2 mb-2">
+        <input id="fenceCoords" readonly class="w-full border rounded p-2 bg-gray-100 mb-3" placeholder="管控区域坐标（自动生成）">
+        <div class="flex justify-end gap-2">
+            <button onclick="closeFenceModal()" class="border px-3 py-1 rounded">取消</button>
+            <button onclick="saveFenceFromDraw()" class="bg-blue-600 text-white px-3 py-1 rounded">录入政务台账</button>
+        </div>
+    </div>
+</div>
+
+<!-- 轨迹溯源弹窗 -->
+<div class="modal" id="trackModal">
+    <div class="modal-box" style="min-width:600px">
+        <h4 class="mb-3 font-semibold">重点人员行动轨迹溯源回放</h4>
+        <div class="flex gap-2 mb-3 flex-wrap">
+            <input type="date" id="trackDate">
+            <select id="trackUser" class="border rounded p-2">
+                <option>重点管控：张奶奶（认知障碍）</option>
+                <option>重点管控：王爷爷（独居高龄）</option>
+                <option>重点管控：李奶奶（失能半失能）</option>
+            </select>
+            <select class="border rounded p-2">
+                <option>全天轨迹</option>
+                <option>夜间高危时段</option>
+                <option>越界告警时段</option>
+            </select>
+            <button onclick="playTrack()" class="bg-blue-800 text-white px-3 py-1 rounded">开始溯源回放</button>
+        </div>
+        <div id="trackArea" class="w-full h-[300px] bg-gray-100 rounded flex items-center justify-center text-gray-500">选择人员与时间段，进行轨迹溯源查询</div>
+        <div class="text-right mt-3">
+            <button class="border px-3 py-1 rounded mr-2">导出轨迹台账</button>
+            <button onclick="closeTrackModal()" class="border px-3 py-1 rounded">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8080/api";
+    const HEADERS = { "Content-Type": "application/json" };
+    const map = document.getElementById("mapBox");
+    const fenceSvg = document.getElementById("fenceSvg");
+
+    const VERTEX_COUNT = 10;
+    let isDrawing = false;
+    let vertexList = [];
+    let currentPolygonPoints = [];
+    let dragIndex = -1;
+
+    function initTenVertex(centerX, centerY){
+        vertexList = [];
+        const r = 120;
+        for(let i = 0; i < VERTEX_COUNT; i++){
+            const angle = (Math.PI * 2 / VERTEX_COUNT) * i;
+            vertexList.push({
+                x: centerX + r * Math.cos(angle),
+                y: centerY + r * Math.sin(angle)
+            });
+        }
+        renderPolygon();
+    }
+
+    function renderPolygon(){
+        fenceSvg.innerHTML = "";
+        document.querySelectorAll(".fence-vertex").forEach(el=>el.remove());
+        let pathD = "";
+        vertexList.forEach((p, idx)=>{
+            pathD += (idx === 0 ? `M${p.x} ${p.y}` : ` L${p.x} ${p.y}`);
+        });
+        pathD += " Z";
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", pathD);
+        path.setAttribute("fill", "rgba(30,64,175,0.15)");
+        path.setAttribute("stroke", "#1e40af");
+        path.setAttribute("stroke-width", "2");
+        fenceSvg.appendChild(path);
+
+        vertexList.forEach((p, idx)=>{
+            const dot = document.createElement("div");
+            dot.className = "fence-vertex";
+            dot.style.left = p.x + "px";
+            dot.style.top = p.y + "px";
+            dot.dataset.idx = idx;
+            map.appendChild(dot);
+            dot.addEventListener("mousedown", (e)=>{
+                e.stopPropagation();
+                dragIndex = idx;
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const originX = vertexList[idx].x;
+                const originY = vertexList[idx].y;
+                function move(ev){
+                    vertexList[dragIndex].x = originX + (ev.clientX - startX);
+                    vertexList[dragIndex].y = originY + (ev.clientY - startY);
+                    renderPolygon();
+                }
+                function up(){
+                    dragIndex = -1;
+                    window.removeEventListener("mousemove", move);
+                    window.removeEventListener("mouseup", up);
+                    updateCoordsData();
+                }
+                window.addEventListener("mousemove", move);
+                window.addEventListener("mouseup", up);
+            });
+        });
+        updateCoordsData();
+    }
+
+    function updateCoordsData(){
+        currentPolygonPoints = [...vertexList];
+        document.getElementById("fenceCoords").value = JSON.stringify(currentPolygonPoints);
+    }
+
+    function startDraw() {
+        isDrawing = true;
+        alert("请点击地图区域，绘制政务安防管控多边形区域，支持顶点自由拖拽调整范围");
+    }
+
+    map.addEventListener("click", (e)=>{
+        if(!isDrawing) return;
+        const rect = map.getBoundingClientRect();
+        const cx = e.clientX - rect.left;
+        const cy = e.clientY - rect.top;
+        initTenVertex(cx, cy);
+        isDrawing = false;
+        openFenceModal();
+    });
+
+    function clearAllFence(){
+        vertexList = [];
+        currentPolygonPoints = [];
+        fenceSvg.innerHTML = "";
+        document.querySelectorAll(".fence-vertex").forEach(el=>el.remove());
+        document.getElementById("fenceCoords").value = "";
+    }
+
+    async function loadFenceList(){
+        const r=await fetch(API_BASE+"/fence/list").catch(()=>({json:()=>({data:[]})}));
+        const d=(await r.json()).data||[];
+        document.getElementById("totalFence").innerText=d.length;
+        document.getElementById("fenceList").innerHTML="";
+        document.querySelectorAll(".fence-item,.map-point").forEach(e=>e.remove());
+        
+        d.forEach(f=>{
+            document.getElementById("fenceList").innerHTML+=`
+            <div class="border-b py-2 text-xs flex justify-between">
+                <span>${f.name}</span>
+                <div>
+                    <span class="${f.type==1?'tag-blue':f.type==2?'tag-wait':'tag-refuse'}">${f.typeName||''}</span>
+                    <button class="ml-2 text-blue-800" onclick="editFence(${f.id})">台账编辑</button>
+                    <button class="ml-1 text-red-600" onclick="deleteFence(${f.id})">注销台账</button>
+                </div>
+            </div>`;
+            if(f.points){
+                try{
+                    vertexList = JSON.parse(f.points);
+                    renderPolygon();
+                }catch(e){}
+            }
+        });
+        // 政务分级重点人员点位
+        addPoint(25,30,"王爷爷｜独居高龄","normal");
+        addPoint(60,45,"李奶奶｜半失能管控","normal");
+        addPoint(30,65,"张奶奶｜认知障碍【高危】","alarm");
+        addPoint(75,50,"刘爷爷｜重点关注","high");
+    }
+
+    function addPoint(l,t,name,status){
+        const p=document.createElement("div");
+        let cls = "map-point";
+        if(status==="alarm") cls += " alarm";
+        if(status==="high") cls += " map-point-high";
+        p.className = cls;
+        p.style.left=l+"%";p.style.top=t+"%";
+        p.onclick = ()=>{
+            alert(`重点人员管控台账\n姓名：${name}\n管控状态：${status === "alarm" ? "越界告警·一级督办" : status==="high"?"重点关注":"正常管控"}`);
+        };
+        p.onmouseenter=e=>{
+            const tip = document.getElementById("pointTip");
+            tip.style.display="block";
+            tip.innerText=`${name}`;
+            tip.style.left=(e.pageX+10)+"px";
+            tip.style.top=(e.pageY+10)+"px";
+        };
+        p.onmouseleave=()=>{
+            document.getElementById("pointTip").style.display="none";
+        };
+        map.appendChild(p);
+    }
+
+    async function loadAlarmList(){
+        const r=await fetch(API_BASE+"/alarm/list").catch(()=>({json:()=>({data:[]})}));
+        const list=(await r.json()).data||[];
+        document.getElementById("alarmList").innerHTML="";
+        let total=0,high=0,deal=0;
+        list.forEach(a=>{
+            total++;
+            if(a.alarmType===3)high++;
+            if(a.dealStatus===1)deal++;
+            const wrapClass = a.dealStatus===1 
+                ? "border bg-gray-50 text-gray-500 p-3 rounded text-xs" 
+                : "border border-red-200 bg-red-50 p-3 rounded text-xs";
+            document.getElementById("alarmList").innerHTML+=`
+            <div class="${wrapClass}">
+                <div class="font-medium">${a.userName||"未知重点人员"}</div>
+                <div>隐患内容：${a.content}</div>
+                <div>告警等级：${a.alarmType===3?'<span class="tag-danger">一级紧急督办</span>':'<span class="tag-wait">二级常规管控</span>'}</div>
+                <div class="text-gray-400">告警时间：${a.createTime}</div>
+                <div class="text-gray-400">责任网格员：${a.gridUser||"未分配"}</div>
+                ${a.dealStatus!==1?`<button class="mt-2 bg-red-600 text-white px-2 py-1 rounded" onclick="openDealModal(${a.id})">隐患处置归档</button>`:`<span class="text-green-600">已闭环归档</span>`}
+            </div>`;
+        });
+        document.getElementById("totalAlarm").innerText=total;
+        document.getElementById("highAlarm").innerText=high;
+        document.getElementById("dealAlarm").innerText=deal;
+    }
+
+    async function saveFence(){
+        const name = document.getElementById("fenceName").value.trim();
+        const type = document.getElementById("fenceType").value;
+        if(!name){
+            alert("请完善安防围栏台账名称");
+            return;
+        }
+        const res = await fetch(API_BASE+"/fence/save",{
+            method:"POST",
+            headers:HEADERS,
+            body:JSON.stringify({name,type,points:JSON.stringify(vertexList)})
+        }).catch(()=>({json:()=>({code:0})}));
+        const d = await res.json();
+        if(d.code===0){
+            alert("安防围栏台账录入成功，纳入辖区监管");
+            loadFenceList();
+            document.getElementById("fenceName").value = "";
+        }
+    }
+
+    async function saveFenceFromDraw(){
+        const id=document.getElementById("editId").value;
+        const name=document.getElementById("newFenceName").value.trim();
+        const type=document.getElementById("newFenceType").value;
+        const points = document.getElementById("fenceCoords").value;
+        if(!name||!points){
+            alert("请完善围栏信息并完成管控区域绘制");
+            return;
+        }
+        const res = await fetch(API_BASE+"/fence/"+(id?"update":"save"),{
+            method:"POST",
+            headers:HEADERS,
+            body:JSON.stringify({id,name,type,points})
+        }).catch(()=>({json:()=>({code:0})}));
+        const d=await res.json();
+        if(d.code===0){
+            alert("围栏台账保存完成，已同步辖区监管数据");
+            loadFenceList();
+            closeFenceModal();
+        }
+    }
+
+    async function submitDeal(){
+        const id=document.getElementById("dealId").value;
+        const result=document.getElementById("dealResult").value;
+        const remark=document.getElementById("dealRemark").value;
+        await fetch(API_BASE+"/alarm/deal",{
+            method:"POST",
+            headers:HEADERS,
+            body:JSON.stringify({id,result,remark})
+        }).catch(()=>{});
+        closeDealModal();
+        loadAlarmList();
+    }
+
+    async function searchData(){
+        loadFenceList();
+        loadAlarmList();
+    }
+    // 政务台账专属导出
+    async function exportGovReport(){
+        await fetch(API_BASE+"/export/gov/fence").catch(()=>{});
+        alert("民政标准化安防围栏&隐患处置台账，导出任务已下发");
+    }
+    function batchFenceOperate(){
+        alert("批量功能：围栏启用/停用、责任人员批量绑定、辖区批量划分");
+    }
+    async function deleteFence(id){
+        if(!confirm("确定注销该安防围栏台账？删除后操作全程留痕不可恢复"))return;
+        await fetch(API_BASE+"/fence/delete",{
+            method:"POST",
+            headers:HEADERS,
+            body:JSON.stringify({id})
+        }).catch(()=>{});
+        loadFenceList();
+    }
+    async function editFence(id){
+        const f=await fetch(API_BASE+"/fence/info?id="+id)
+            .then(r=>r.json()).catch(()=>({data:{}}));
+        const data = f.data || {};
+        document.getElementById("editId").value=data.id||"";
+        document.getElementById("newFenceName").value=data.name||"";
+        document.getElementById("newFenceType").value=data.type||1;
+        if(data.points){
+            vertexList = JSON.parse(data.points);
+            renderPolygon();
+        }
+        openFenceModal();
+    }
+
+    function openDealModal(id){
+        document.getElementById("dealId").value=id;
+        document.getElementById("dealModal").style.display="flex";
+    }
+    function closeDealModal(){
+        document.getElementById("dealModal").style.display="none";
+        document.getElementById("dealRemark").value="";
+    }
+    function openFenceModal(){
+        document.getElementById("editId").value="";
+        document.getElementById("newFenceName").value="";
+        document.getElementById("fenceModal").style.display="flex";
+    }
+    function closeFenceModal(){
+        document.getElementById("fenceModal").style.display="none";
+    }
+    function openTrackModal(){
+        document.getElementById("trackModal").style.display="flex";
+    }
+    function closeTrackModal(){
+        document.getElementById("trackModal").style.display="none";
+    }
+    async function playTrack(){
+        document.getElementById("trackArea").innerHTML="轨迹溯源数据加载中...";
+        setTimeout(()=>{
+            document.getElementById("trackArea").innerHTML="已加载完成，可查看重点人员越界时段行动轨迹，支持台账导出";
+        },800);
+    }
+
+    function toggleSubmenu(el){
+        const s=el.nextElementSibling;
+        s.style.display=s.style.display=="block"?"none":"block";
+        el.querySelector(".menu-arrow").classList.toggle("open");
+    }
+    document.getElementById("collapseBtn").onclick=()=>{
+        document.getElementById("sidebar").classList.toggle("collapse");
+        document.getElementById("mainContent").classList.toggle("collapse");
+    };
+    
+    document.getElementById("userBtn").onclick=e=>{
+        e.stopPropagation();
+        const d=document.getElementById("userDrop");
+        d.style.display=d.style.display=="block"?"none":"block";
+    };
+    document.addEventListener("click",()=>{
+        document.getElementById("userDrop").style.display="none";
+    });
+    
+    document.querySelectorAll(".tab-item").forEach(t=>{
+        t.onclick=()=>{
+            document.querySelectorAll(".tab-item").forEach(i=>i.classList.remove("active"));
+            t.classList.add("active");
+            document.querySelectorAll(".tab-content").forEach(c=>c.classList.add("hidden"));
+            document.getElementById(t.dataset.tab).classList.remove("hidden");
+        };
+    });
+    
+    setInterval(() => {
+        document.getElementById("currentTime").innerText = new Date().toLocaleString('zh-CN');
+    }, 1000);
+    
+    setInterval(()=>{
+        loadFenceList();
+        loadAlarmList();
+    },8000);
+
+    function loginOut(){
+        if(confirm("确定退出民政养老监管系统？")){
+            localStorage.clear();
+            sessionStorage.clear();
+            location.href = "login.html";
+        }
+    }
+
+
+// ====================== 4张不同类型图表 ======================
+// 1. 环形图（原有保留）
+new Chart(document.getElementById("chart1"),{
+    type:"doughnut",
+    data:{
+        labels:["越界风险","禁区闯入","设备离线","SOS求助"],
+        datasets:[{
+            data:[40,30,20,10],
+            backgroundColor:["#3b82f6","#ef4444","#f59e0b","#10b981"]
+        }]
+    },
+    options:{ plugins:{ legend:{ display:false } } }
+});
+
+// 2. 雷达图（全新）
+new Chart(document.getElementById("chart2"),{
+    type:"radar",
+    data:{
+        labels:["越界","禁区","设备","独居","慢病","夜间"],
+        datasets:[{
+            data:[70,50,75,85,60,65],
+            backgroundColor:"rgba(30,64,175,0.2)",
+            borderColor:"#1e40af"
+        }]
+    },
+    options:{ plugins:{ legend:{ display:false } } }
+});
+
+// 3. 极坐标图（全新 独特类型）
+new Chart(document.getElementById("chart3"),{
+    type:"polarArea",
+    data:{
+        labels:["低危","中危","高危","紧急"],
+        datasets:[{
+            data:[35,25,20,20],
+            backgroundColor:["#10b981","#3b82f6","#f59e0b","#ef4444"]
+        }]
+    },
+    options:{ plugins:{ legend:{ display:false } } }
+});
+
+// 4. 水平柱状图（全新 横向）
+new Chart(document.getElementById("chart4"),{
+    type:"bar",
+    data:{
+        labels:["城东","城西","城北","城南"],
+        datasets:[{
+            data:[28,16,12,8],
+            backgroundColor:"#1e40af"
+        }]
+    },
+    options:{ indexAxis:"y", plugins:{ legend:{ display:false } } }
+});
+
+
+
+    loadFenceList();
+    loadAlarmList();
+</script>
+</body>
+</html>
