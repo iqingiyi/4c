@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用药管理中心 - 智护颐年·智慧养老平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#f6f8fc;color:#333}
+        .sidebar{width:190px;background:#fff;border-right:1px solid #e5e7eb;height:100vh;position:fixed;left:0;top:0;padding:16px 0;overflow-y:auto;z-index:100}
+        .logo{padding:0 20px 24px;display:flex;align-items:center;gap:10px}
+        .logo-icon{width:36px;height:36px;background:#3b82f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+        .logo-text h1{font-size:18px;font-weight:600;color:#1f2937}
+        .logo-text p{font-size:12px;color:#6b7280}
+        .menu-item{display:flex;align-items:center;gap:12px;padding:12px 20px;color:#4b5563;text-decoration:none;font-size:14px;transition:all .2s;cursor:pointer}
+        .menu-item:hover{background:#eff6ff;color:#3b82f6}
+        .menu-item.active{background:#eff6ff;color:#3b82f6;border-right:3px solid #3b82f6}
+        .submenu{display:none;overflow:hidden}
+        .submenu-item{display:flex;align-items:center;padding:10px 20px 10px 36px;color:#6b7280;text-decoration:none;font-size:13px;transition:.2s}
+        .submenu-item:hover{background:#f9fafb;color:#3b82f6}
+        .submenu-item.active{color:#3b82f6;font-weight:500}
+        .menu-arrow{margin-left:auto;font-size:12px;transition:transform .2s}
+        .menu-arrow.open{transform:rotate(90deg)}
+        .ai-assistant{position:sticky;bottom:16px;margin:12px;background:linear-gradient(135deg,#eff6ff,#e0f2fe);border-radius:14px;padding:16px;border:1px solid #bfdbfe}
+        .ai-assistant h3{font-size:13.5px;font-weight:700;margin-bottom:3px;color:#1e40af}
+        .ai-assistant p{font-size:11px;color:#64748b;margin-bottom:10px}
+        .ai-assistant button{width:100%;background:#2563eb;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12.5px;cursor:pointer;font-weight:600}
+        .main-content{margin-left:190px;padding:0}
+        .top-nav{background:#fff;border-bottom:1px solid #eaeef6;padding:14px 28px;display:flex;align-items:center;justify-content:space-between}
+        .nav-left{display:flex;align-items:center;gap:20px}
+        .nav-menu{display:flex;gap:32px}
+        .nav-menu a{text-decoration:none;color:#4b5563;font-size:14px;font-weight:500;padding:6px 0}
+        .nav-menu a.active{color:#3b82f6;border-bottom:2px solid #3b82f6}
+        .nav-right{display:flex;align-items:center;gap:24px}
+        .nav-notification{position:relative;font-size:18px;color:#6b7280}
+        .nav-notification .badge{position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:10px;padding:2px 5px;border-radius:10px}
+        .nav-time{font-size:14px;color:#4b5563}
+        .nav-user{display:flex;align-items:center;gap:8px;cursor:pointer}
+        .nav-user img{width:34px;height:34px;border-radius:50%;background:#e5e7eb}
+        .content{padding:24px 32px}
+        .filter-box{background:#fff;border-radius:14px;padding:18px 22px;box-shadow:0 2px 6px rgba(0,0,0,0.04);margin-bottom:20px;display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+        .filter-item{display:flex;align-items:center;gap:8px}
+        .filter-item label{font-size:13px;color:#6b7280}
+        .filter-item select,.filter-item input{padding:7px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px}
+        .btn{padding:7px 16px;border-radius:8px;border:none;cursor:pointer;transition:0.2s}
+        .btn-primary{background:#3b82f6;color:#fff}
+        .btn-primary:hover{background:#2563eb}
+        .btn-success{background:#10b981;color:#fff}
+        .btn-warning{background:#f59e0b;color:#fff}
+        .btn-danger{background:#ef4444;color:#fff}
+        .btn-light{background:#f3f4f6;color:#4b5563}
+        .btn-sm{padding:4px 10px;font-size:12px}
+        .drug-lib-modal .modal-content {
+    width: 980px;
+}
+
+.drug-lib-table th,
+.drug-lib-table td {
+    vertical-align: middle;
+}
+
+.drug-lib-table th:last-child,
+.drug-lib-table td:last-child {
+    width: 82px;
+    text-align: center;
+}
+
+.drug-lib-edit-btn {
+    min-width: 52px;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    color: #4b5563;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.drug-lib-edit-btn:hover {
+    background: #e5e7eb;
+}
+        .stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-bottom:20px}
+        .stat-card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 6px rgba(0,0,0,0.04);border-left:4px solid #3b82f6}
+        .stat-title{font-size:13px;color:#6b7280;margin-bottom:8px}
+        .stat-num{font-size:24px;font-weight:700;color:#1f2937}
+        .drug-tabs{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+        .drug-tab{padding:10px 18px;background:#fff;border-radius:10px;cursor:pointer;font-size:14px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:0.2s}
+        .drug-tab.active{background:#3b82f6;color:#fff}
+        .table-box{background:#fff;border-radius:14px;padding:20px;box-shadow:0 3px 10px rgba(0,0,0,0.05);margin-bottom:20px}
+        .table{width:100%;border-collapse:collapse}
+        .table th{background:#f9fafb;padding:12px;text-align:left;font-size:13px;color:#6b7280;border-bottom:1px solid #e5e7eb}
+        .table td{padding:12px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6}
+        .table tr:hover{background:#f9fafb}
+        .tag{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:500;white-space:nowrap}
+        .tag-on{background:#d1fae5;color:#059669}
+        .tag-wait{background:#fef3c7;color:#d97706}
+        .tag-off{background:#fee2e2;color:#dc2626}
+        .tag-delay{background:#e0e7ff;color:#4f46e5}
+        .tag-repair{background:#fce7f3;color:#db2777}
+        .tag-pause{background:#f3f4f6;color:#6b7280}
+        .pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#eff6ff;color:#3b82f6;border-radius:99px;font-size:11px}
+        .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:9999}
+        .modal-content{background:#fff;border-radius:14px;padding:24px;max-height:85vh;overflow-y:auto}
+        .modal-lg{width:850px}
+        .modal-md{width:720px}
+        .modal-sm{width:500px}
+        .form-group{margin-bottom:14px}
+        .form-group label{display:block;font-size:13px;color:#6b7280;margin-bottom:6px}
+        .form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;resize:none}
+        .flex-row{display:flex;gap:12px;flex-wrap:wrap}
+        .flex-1{flex:1}
+        .medicine-card{background:linear-gradient(135deg,#f0f7ff,#ffffff);border-left:4px solid #3b82f6;border-radius:10px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(59,130,246,0.1)}
+        .card-title{font-weight:600;color:#1f2937;margin-bottom:8px;font-size:15px}
+        .text-danger{color:#dc2626}
+        .text-warning{color:#d97706}
+        .text-success{color:#059669}
+        .text-primary{color:#3b82f6}
+        .chart-box{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,0.04);margin-bottom:20px}
+        ::-webkit-scrollbar{width:6px;height:6px}
+        ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+        .medicine-pagination {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.page-info {
+    font-size: 13px;
+    color: #64748b;
+    margin-right: 8px;
+}
+
+.page-btn {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.page-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.page-btn.active {
+    background: #3b82f6;
+    color: #fff;
+    border-color: #3b82f6;
+}
+
+.page-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.page-ellipsis {
+    color: #94a3b8;
+    padding: 0 4px;
+}
+
+.page-size {
+    height: 34px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0 8px;
+    font-size: 13px;
+    color: #475569;
+    background: #fff;
+}
+    </style>
+</head>
+<body>
+<!-- 侧边栏 -->
+<div class="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-cloud"></i></div>
+        <div class="logo-text"><h1>智护颐年</h1><p>智慧养老服务资源调度平台</p></div>
+    </div>
+    <div class="menu">
+        <a href="index.html" class="menu-item"><i class="fa fa-home"></i><span>首页总览</span></a>
+        <div class="menu-item" onclick="toggle(this)">
+            <i class="fa fa-user"></i><span>老人综合管理</span>
+            <i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">老人档案管理</a>
+            <a href="#" class="submenu-item">失能等级评估</a>
+            <a href="#" class="submenu-item">特殊老人管理</a>
+        </div>
+        <div class="menu-item active" onclick="toggle(this)">
+            <i class="fa fa-heartbeat"></i><span>健康监测管理</span>
+            <i class="fa fa-angle-right menu-arrow open"></i>
+        </div>
+        <div class="submenu" style="display:block;">
+            <a href="health.html" class="submenu-item">实时健康数据</a>
+            <a href="chronic.html" class="submenu-item">慢病专项管理</a>
+            <a href="#" class="submenu-item active">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item">健康趋势分析</a>
+        </div>
+        <a href="#" class="menu-item"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-calendar"></i><span>服务资源调度</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-users"></i><span>人员队伍管理</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-microchip"></i><span>智能设备物联</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-robot"></i><span>AI智慧养老</span></a>
+        <a href="#" class="menu-item"><i class="fa fa-money"></i><span>补贴财务中心</span></a>
+    </div>
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3>
+        <p>智能用药风险分析 &amp; 用药指导</p>
+        <button onclick="openGlobalAi()">立即AI咨询</button>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button style="background:none;border:none;font-size:18px"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="#">实时健康数据</a>
+                <a href="chronic.html">慢病专项管理</a>
+                <a href="#" class="active">用药管理</a>
+                <a href="#">体检记录</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">8</span></div>
+            <div class="nav-time" id="ctime"></div>
+            <div class="nav-user"><img src="" alt="头像"><span>管理员</span></div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="filter-box">
+            <div class="filter-item">
+                <label>老人姓名</label>
+                <input type="text" id="searchElder" placeholder="请输入老人姓名">
+            </div>
+            <div class="filter-item">
+                <label>精细药品分类</label>
+                <select id="searchDrugType">
+                    <option value="all">全部药品分类</option>
+                    <option>一、降压类</option>
+                    <option>— 钙通道阻滞剂</option>
+                    <option>— ACEI降压药</option>
+                    <option>— ARB降压药</option>
+                    <option>— 利尿降压药</option>
+                    <option>— β受体阻滞剂</option>
+                    <option>二、降糖类</option>
+                    <option>— 双胍类</option>
+                    <option>— 磺脲类</option>
+                    <option>— 胰岛素制剂</option>
+                    <option>三、降脂抗血栓类</option>
+                    <option>— 他汀类降脂</option>
+                    <option>— 抗血小板药物</option>
+                    <option>四、心脏专科用药</option>
+                    <option>五、肠胃消化类</option>
+                    <option>六、骨关节风湿止痛类</option>
+                    <option>七、安神/呼吸/全科营养类</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>服药状态</label>
+                <select id="searchStatus">
+                    <option value="all">全部状态</option>
+                    <option value="on">已按时服药</option>
+                    <option value="wait">待服药</option>
+                    <option value="off">漏服</option>
+                    <option value="delay">延后服药</option>
+                    <option value="repair">手动补服</option>
+                    <option value="pause">暂停用药</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>设备状态</label>
+                <select id="searchDevice">
+                    <option value="all">全部设备</option>
+                    <option value="online">设备在线</option>
+                    <option value="offline">设备离线</option>
+                    <option value="error">设备异常</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="loadMedicineList()"><i class="fa fa-search"></i> 筛选查询</button>
+            <button class="btn btn-light" onclick="resetSearch()"><i class="fa fa-refresh"></i> 重置</button>
+            <button class="btn btn-success" onclick="openAddMedicinePlan()"><i class="fa fa-plus"></i> 新增用药计划</button>
+            <button class="btn btn-warning" onclick="openDrugLib()"><i class="fa fa-cubes"></i> 全局精细药品库</button>
+            <button class="btn btn-light" onclick="exportMedicineExcel()"><i class="fa fa-download"></i> 导出台账</button>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-title">在用用药计划总数</div>
+                <div class="stat-num" id="medicineTotal">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">今日按时服药</div>
+                <div class="stat-num text-success" id="medicineOn">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">待服药提醒</div>
+                <div class="stat-num text-warning" id="medicineWait">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">漏服告警数量</div>
+                <div class="stat-num text-danger" id="medicineOff">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">智能设备异常</div>
+                <div class="stat-num text-danger" id="medicineDevice">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">本周服药依从率</div>
+                <div class="stat-num text-primary" id="medicineCompliance">0%</div>
+            </div>
+        </div>
+
+        <div class="drug-tabs">
+            <div class="drug-tab active" data-type="all">全部用药计划</div>
+            <div class="drug-tab" data-type="long">长期慢病用药</div>
+            <div class="drug-tab" data-type="temp">临时短期用药</div>
+            <div class="drug-tab" data-type="risk">用药风险预警</div>
+            <div class="drug-tab" data-type="pause">已暂停用药</div>
+        </div>
+
+        <div class="table-box">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>老人信息</th>
+                        <th>药品名称/精细分类</th>
+                        <th>用药剂量</th>
+                        <th>服药频次&时间</th>
+                        <th>用药类型</th>
+                        <th>今日服药状态</th>
+                        <th>提醒方式</th>
+                        <th>智能设备状态</th>
+                        <th>用药周期</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="medicineTableBody"></tbody>
+            </table>
+             <div id="medicinePagination" class="medicine-pagination"></div>
+        </div>
+
+        <div class="chart-box">
+            <div class="flex justify-between items-center mb-4">
+                <h4 class="font-semibold text-gray-700">服药数据趋势 &amp; 精细药品分类使用统计</h4>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+                <div><canvas id="statusChart"></canvas></div>
+                <div><canvas id="drugChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增用药计划（超精细全部药品名单） -->
+<div class="modal" id="medicinePlanModal">
+    <div class="modal-content modal-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">新增/编辑用药计划｜全品类精细药品选择</h3>
+            <button onclick="closeMedicinePlanModal()" class="text-xl text-gray-500 hover:text-gray-800">×</button>
+        </div>
+        <div class="flex-row">
+            <div class="form-group flex-1">
+                <label>绑定老人 <span class="text-danger">*</span></label>
+                <select id="planElder">
+                    <option>张爷爷（73岁｜高血压）</option>
+                    <option>王奶奶（79岁｜糖尿病）</option>
+                    <option>刘爷爷（81岁｜冠心病）</option>
+                    <option>陈奶奶（75岁｜高血压）</option>
+                    <option>吴奶奶（71岁｜健康老人）</option>
+                </select>
+            </div>
+            <div class="form-group flex-1">
+                <label>用药类型 <span class="text-danger">*</span></label>
+                <select id="planUseType">
+                    <option value="long">长期慢病用药</option>
+                    <option value="temp">临时短期用药</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>精细全品类药品选择 <span class="text-danger">*</span></label>
+            <select id="planDrug" style="height:120px">
+                <option disabled>—————— 降压类 ——————</option>
+                <option>硝苯地平｜钙通道阻滞剂</option>
+                <option>氨氯地平｜钙通道阻滞剂</option>
+                <option>左旋氨氯地平｜钙通道阻滞剂</option>
+                <option>非洛地平｜钙通道阻滞剂</option>
+                <option>依那普利｜ACEI降压药</option>
+                <option>贝那普利｜ACEI降压药</option>
+                <option>缬沙坦｜ARB降压药</option>
+                <option>厄贝沙坦｜ARB降压药</option>
+                <option>替米沙坦｜ARB降压药</option>
+                <option>氢氯噻嗪｜利尿降压药</option>
+                <option>螺内酯｜利尿降压药</option>
+                <option>美托洛尔｜β受体阻滞剂</option>
+                <option>比索洛尔｜β受体阻滞剂</option>
+
+                <option disabled>—————— 降糖类 ——————</option>
+                <option>二甲双胍｜双胍类</option>
+                <option>格列美脲｜磺脲类</option>
+                <option>格列齐特｜磺脲类</option>
+                <option>西格列汀｜二肽基肽酶抑制剂</option>
+                <option>达格列净｜钠糖转运蛋白抑制剂</option>
+                <option>长效胰岛素｜胰岛素制剂</option>
+                <option>短效胰岛素｜胰岛素制剂</option>
+
+                <option disabled>—————— 降脂/抗血栓 ——————</option>
+                <option>辛伐他汀｜他汀类降脂</option>
+                <option>阿托伐他汀｜他汀类降脂</option>
+                <option>瑞舒伐他汀｜他汀类降脂</option>
+                <option>阿司匹林｜抗血小板</option>
+                <option>氯吡格雷｜抗血小板</option>
+                <option>银杏叶片｜活血化瘀</option>
+
+                <option disabled>—————— 心脏专科 ——————</option>
+                <option>硝酸甘油｜抗心绞痛</option>
+                <option>单硝酸异山梨酯｜抗心绞痛</option>
+                <option>地高辛｜抗心衰</option>
+                <option>稳心颗粒｜抗心律失常</option>
+
+                <option disabled>—————— 肠胃消化类 ——————</option>
+                <option>奥美拉唑｜抑酸护胃</option>
+                <option>雷贝拉唑｜抑酸护胃</option>
+                <option>兰索拉唑｜抑酸护胃</option>
+                <option>莫沙必利｜促胃动力</option>
+                <option>双歧杆菌｜肠道调理</option>
+
+                <option disabled>—————— 骨关节/止痛 ——————</option>
+                <option>碳酸钙D3｜补钙维D</option>
+                <option>骨化三醇｜抗骨质疏松</option>
+                <option>布洛芬｜抗炎止痛</option>
+                <option>塞来昔布｜风湿止痛</option>
+                <option>氨基葡萄糖｜骨关节修复</option>
+
+                <option disabled>—————— 安神/呼吸/全科 ——————</option>
+                <option>谷维素｜安神助眠</option>
+                <option>氯雷他定｜抗过敏</option>
+                <option>氨溴索｜化痰止咳</option>
+                <option>复合维生素B｜营养补充</option>
+            </select>
+        </div>
+        <div class="flex-row">
+            <div class="form-group flex-1">
+                <label>单次用药剂量 <span class="text-danger">*</span></label>
+                <input type="text" id="planDose" placeholder="例：1片/5mg/1袋">
+            </div>
+            <div class="form-group flex-1">
+                <label>每日服药频次</label>
+                <select id="planFreq">
+                    <option>每日1次</option>
+                    <option>每日2次</option>
+                    <option>每日3次</option>
+                    <option>每日4次</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex-row">
+            <div class="form-group flex-1">
+                <label>服药时间设置</label>
+                <div class="flex-row">
+                    <input type="time" id="time1" value="08:00" class="flex-1">
+                    <input type="time" id="time2" value="20:00" class="flex-1">
+                </div>
+            </div>
+            <div class="form-group flex-1">
+                <label>提醒推送方式（三端联动）</label>
+                <select id="planNotifyMode">
+                    <option>智能药盒 + 管理平台 + 子女端</option>
+                    <option>仅智能药盒设备提醒</option>
+                    <option>仅后台平台消息提醒</option>
+                    <option>仅绑定子女消息推送</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex-row">
+            <div class="form-group flex-1">
+                <label>用药开始日期</label>
+                <input type="date" id="planStartTime">
+            </div>
+            <div class="form-group flex-1">
+                <label>用药结束日期（长期可不填）</label>
+                <input type="date" id="planEndTime">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>绑定医嘱信息</label>
+            <textarea id="planDoctorAdvice" rows="2" placeholder="填写开具医生、医嘱编号、用药注意事项"></textarea>
+        </div>
+        <div class="form-group">
+            <label>用药禁忌 &amp; 特殊备注</label>
+            <textarea id="planRemark" rows="2" placeholder="药物冲突、过敏史、饮食禁忌等"></textarea>
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button class="btn btn-light" onclick="closeMedicinePlanModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveMedicinePlan()">保存并同步至智能设备</button>
+        </div>
+    </div>
+</div>
+
+<!-- 老人用药详情弹窗 -->
+<div class="modal" id="medicineDetailModal">
+    <div class="modal-content modal-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">老人用药详情精细卡片</h3>
+            <button onclick="closeDetailModal()" class="text-xl text-gray-500 hover:text-gray-800">×</button>
+        </div>
+        <div id="detailCardBox"></div>
+    </div>
+</div>
+
+<!-- 全局精细药品库 -->
+<div class="modal drug-lib-modal" id="drugLibModal">
+    <div class="modal-content modal-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">全局精细化药品库｜全品类养老专用药品</h3>
+            <button onclick="closeDrugLibModal()" class="text-xl text-gray-500 hover:text-gray-800">×</button>
+        </div>
+        <div class="filter-item mb-3">
+            <input type="text" id="drugLibKeyword" placeholder="搜索药品名称/子类/规格" class="flex-1">
+            <button class="btn btn-primary" onclick="loadMedicineLibrary()">搜索</button>
+            <button class="btn btn-success" onclick="addDrugLibraryPrompt()">新增精细药品</button>
+        </div>
+        <table class="table drug-lib-table">
+            <thead>
+                <tr>
+                    <th>药品名称</th>
+                    <th>一级分类</th>
+                    <th>二级精细子类</th>
+                    <th>规格/剂量</th>
+                    <th>禁忌症</th>
+                    <th>库存余量</th>
+                    <th>有效期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="drugLibTableBody">
+                <tr>
+                    <td>硝苯地平缓释片</td>
+                    <td>降压类</td>
+                    <td>钙通道阻滞剂</td>
+                    <td>20mg/片</td>
+                    <td>低血压、心衰患者禁用</td>
+                    <td class="text-warning">不足</td>
+                    <td>2027-05-20</td>
+                    <td><span class="tag tag-on">正常</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary">编辑</button>
+                        <button class="btn btn-sm btn-danger">禁用</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>二甲双胍片</td>
+                    <td>降糖类</td>
+                    <td>双胍类</td>
+                    <td>0.5g/片</td>
+                    <td>肾功能不全慎用</td>
+                    <td class="text-success">充足</td>
+                    <td>2027-08-15</td>
+                    <td><span class="tag tag-on">正常</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary">编辑</button>
+                        <button class="btn btn-sm btn-danger">禁用</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>阿司匹林肠溶片</td>
+                    <td>降脂抗血栓类</td>
+                    <td>抗血小板药物</td>
+                    <td>100mg/片</td>
+                    <td>胃溃疡、出血倾向禁用</td>
+                    <td class="text-success">充足</td>
+                    <td>2026-03-10</td>
+                    <td><span class="tag tag-off">即将过期</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary">编辑</button>
+                        <button class="btn btn-sm btn-danger">禁用</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>奥美拉唑肠溶胶囊</td>
+                    <td>肠胃消化类</td>
+                    <td>抑酸护胃</td>
+                    <td>20mg/粒</td>
+                    <td>严重肝肾功能不全慎用</td>
+                    <td class="text-success">充足</td>
+                    <td>2027-11-02</td>
+                    <td><span class="tag tag-on">正常</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary">编辑</button>
+                        <button class="btn btn-sm btn-danger">禁用</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- 药品库编辑弹窗 -->
+<div class="modal" id="drugLibraryEditModal">
+    <div class="modal-content modal-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">编辑精细药品信息</h3>
+            <button onclick="closeDrugLibraryEditModal()" class="text-xl text-gray-500 hover:text-gray-800">×</button>
+        </div>
+
+        <input type="hidden" id="drugEditId">
+
+        <div class="flex-row">
+            <div class="form-group flex-1">
+                <label>药品名称 <span class="text-danger">*</span></label>
+                <input type="text" id="drugEditName" placeholder="例：硝苯地平缓释片">
+            </div>
+            <div class="form-group flex-1">
+                <label>规格/剂量</label>
+                <input type="text" id="drugEditSpec" placeholder="例：10mg*30片">
+            </div>
+        </div>
+
+        <div class="flex-row">
+            <div class="form-group flex-1">
+                <label>一级分类</label>
+                <input type="text" id="drugEditCategory" placeholder="例：降压类">
+            </div>
+            <div class="form-group flex-1">
+                <label>二级精细子类</label>
+                <input type="text" id="drugEditSubCategory" placeholder="例：钙通道阻滞剂">
+            </div>
+        </div>
+
+        <div class="flex-row">
+            <div class="form-group flex-1">
+                <label>库存余量</label>
+                <input type="text" id="drugEditStock" placeholder="例：充足 / 不足 / 80">
+            </div>
+            <div class="form-group flex-1">
+                <label>有效期</label>
+                <input type="date" id="drugEditExpireDate">
+            </div>
+            <div class="form-group flex-1">
+                <label>状态</label>
+                <select id="drugEditStatus">
+                    <option>正常</option>
+                    <option>即将过期</option>
+                    <option>库存不足</option>
+                    <option>禁用</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>用法说明</label>
+            <input type="text" id="drugEditUsage" placeholder="例：餐后口服，每日一次">
+        </div>
+
+        <div class="form-group">
+            <label>禁忌症</label>
+            <textarea id="drugEditContraindication" rows="2" placeholder="例：严重肾功能不全禁用"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>备注</label>
+            <textarea id="drugEditRemark" rows="2" placeholder="例：老年人常用药，需遵医嘱使用"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-6">
+            <button class="btn btn-light" onclick="closeDrugLibraryEditModal()">取消</button>
+            <button class="btn btn-primary" onclick="saveDrugLibraryEdit()">保存修改</button>
+        </div>
+    </div>
+</div>
+<!-- AI用药解读 -->
+<div class="modal" id="medicineAiModal">
+    <div class="modal-content modal-md">
+        <div class="flex justify-between items-center mb-4">
+            <div class="ai-title text-primary font-semibold text-lg"><i class="fa fa-robot mr-2"></i>AI 智能用药风险解读</div>
+            <button onclick="closeAiModal()" class="text-xl text-gray-500 hover:text-gray-800">×</button>
+        </div>
+        <div id="aiMedicineResult" class="ai-content bg-gray-50 p-4 rounded-lg text-sm leading-relaxed"></div>
+    </div>
+</div>
+
+<script>
+const API_CANDIDATES = ["http://127.0.0.1:8000", "http://localhost:8000"];
+let API_BASE = API_CANDIDATES[0];
+let currentPage = 1;
+let pageSize = 10;
+let currentTabType = "all";
+let currentPlanId = null;
+let currentDrugLibItem = null;
+let statusChartInstance = null;
+let drugChartInstance = null;
+
+const statusMap = {
+    on:{text:"已按时服药",class:"tag-on"},
+    wait:{text:"待服药",class:"tag-wait"},
+    off:{text:"漏服告警",class:"tag-off"},
+    delay:{text:"延后服药",class:"tag-delay"},
+    repair:{text:"手动补服",class:"tag-repair"},
+    pause:{text:"暂停用药",class:"tag-pause"}
+};
+const deviceMap = {
+    online:{text:"设备在线",class:"text-success"},
+    offline:{text:"设备离线",class:"text-danger"},
+    error:{text:"设备异常",class:"text-warning"}
+};
+const useTypeMap = {long:"长期慢病用药",temp:"临时短期用药"};
+
+async function apiFetch(path, options = {}){
+    let lastErr = null;
+    for (const base of API_CANDIDATES) {
+        try {
+            const res = await fetch(`${base}${path}`, options);
+            if (!res.ok) {
+                let msg = `${base}${path} 返回状态码 ${res.status}`;
+                try {
+                    const errData = await res.clone().json();
+                    msg += `：${errData.detail || errData.msg || JSON.stringify(errData)}`;
+                } catch(e) {}
+                throw new Error(msg);
+            }
+            API_BASE = base;
+            return res;
+        } catch (err) {
+            lastErr = err;
+            console.warn("接口尝试失败：", base, err);
+        }
+    }
+    throw lastErr || new Error("无法连接后端接口");
+}
+
+function toggle(el){
+    const sub = el.nextElementSibling;
+    const arrow = el.querySelector('.menu-arrow');
+    if (!sub) return;
+    sub.style.display = sub.style.display === 'block' ? 'none' : 'block';
+    if (arrow) arrow.classList.toggle('open');
+}
+function setTime(){
+    document.getElementById('ctime').innerText = new Date().toLocaleString('zh-CN');
+}
+setTime();
+setInterval(setTime,1000);
+
+function getDrugTypeByDrugOption(text){
+    const raw = (text || "").trim();
+    const parts = raw.split('｜');
+    const drugName = parts[0] || raw;
+    const sub = parts[1] || "其他";
+    let category = "其他全科类";
+    if (["钙通道阻滞剂","ACEI降压药","ARB降压药","利尿降压药","β受体阻滞剂"].includes(sub)) category = "降压类";
+    else if (["双胍类","磺脲类","二肽基肽酶抑制剂","钠糖转运蛋白抑制剂","胰岛素制剂"].includes(sub)) category = "降糖类";
+    else if (["他汀类降脂","抗血小板","抗血小板药物","活血化瘀"].includes(sub)) category = "降脂抗血栓类";
+    else if (["抗心绞痛","抗心衰","抗心律失常"].includes(sub)) category = "心脏专科用药";
+    else if (["抑酸护胃","促胃动力","肠道调理"].includes(sub)) category = "肠胃消化类";
+    else if (["补钙维D","抗骨质疏松","抗炎止痛","风湿止痛","骨关节修复"].includes(sub)) category = "骨关节风湿止痛类";
+    else if (["安神助眠","抗过敏","化痰止咳","营养补充"].includes(sub)) category = "安神/呼吸/全科营养类";
+    return {drugName, drugType: `${category}-${sub}`};
+}
+
+function parseElderOption(text){
+    const name = (text || "").split('（')[0].trim();
+    const tag = ((text || "").match(/（(.+?)）/) || [null, ""])[1];
+    return {elderName: name || "未命名老人", elderTag: tag || ""};
+}
+
+function getPlanPayload(){
+    const elder = parseElderOption(document.getElementById('planElder').value);
+    const drug = getDrugTypeByDrugOption(document.getElementById('planDrug').value);
+    const time1 = document.getElementById('time1').value || "08:00";
+    const time2 = document.getElementById('time2').value || "";
+    return {
+        elder_name: elder.elderName,
+        elder_tag: elder.elderTag,
+        drug_name: drug.drugName,
+        drug_type: drug.drugType,
+        dose: document.getElementById('planDose').value.trim() || "1片/次",
+        freq: document.getElementById('planFreq').value,
+        time: time2 ? `${time1} / ${time2}` : time1,
+        use_type: document.getElementById('planUseType').value,
+        status: "wait",
+        notify: document.getElementById('planNotifyMode').value,
+        device_status: "online",
+        start_time: document.getElementById('planStartTime').value || new Date().toISOString().slice(0,10),
+        end_time: document.getElementById('planEndTime').value || "长期用药",
+        doctor_advice: document.getElementById('planDoctorAdvice').value.trim(),
+        remark: document.getElementById('planRemark').value.trim()
+    };
+}
+
+async function loadMedicineList(){
+    const params = new URLSearchParams({
+        elderName: document.getElementById('searchElder').value.trim(),
+        drugType: document.getElementById('searchDrugType').value,
+        status: document.getElementById('searchStatus').value,
+        deviceStatus: document.getElementById('searchDevice').value,
+        tagType: currentTabType
+    });
+
+    try {
+        const res = await apiFetch(`/api/medicine/list?${params.toString()}`);
+        const result = await res.json();
+        medicineData = result.data || [];
+        currentPage = 1;
+        renderMedicinePage();
+        renderMedicineStats(result.stats || {});
+        initChart(result.charts || null, medicineData);
+    } catch (err) {
+        console.error(err);
+        document.getElementById('medicineTableBody').innerHTML = `
+            <tr><td colspan="10" style="text-align:center;padding:48px;color:#ef4444;">
+                <i class="fa fa-exclamation-triangle"></i><br>
+                用药接口连接失败：${err.message || err}<br>
+                <span style="font-size:12px;color:#6b7280;">请确认可打开 http://127.0.0.1:8000/api/medicine/list</span>
+            </td></tr>`;
+    }
+}
+
+function renderMedicineStats(stats){
+    const setText = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+    setText('medicineTotal', stats.total ?? 0);
+    setText('medicineOn', stats.on ?? 0);
+    setText('medicineWait', stats.wait ?? 0);
+    setText('medicineOff', stats.off ?? 0);
+    setText('medicineDevice', stats.deviceError ?? 0);
+    setText('medicineCompliance', `${stats.compliance ?? 0}%`);
+}
+
+function renderMedicineTable(list){
+    const body = document.getElementById('medicineTableBody');
+    body.innerHTML = "";
+    if(!list.length){
+        body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:48px;color:#94a3b8;">暂无匹配的用药计划</td></tr>`;
+        return;
+    }
+    list.forEach(item=>{
+        const st = statusMap[item.status] || statusMap.wait;
+        const dev = deviceMap[item.deviceStatus] || deviceMap.online;
+        body.innerHTML += `
+        <tr>
+            <td><div class="font-medium">${item.elderName || '-'}</div><div class="text-xs text-gray-500">${item.elderTag || ''}</div></td>
+            <td><span class="pill">${item.drugName || '-'}</span><div class="text-xs text-gray-500">${item.drugType || '-'}</div></td>
+            <td>${item.dose || '-'}</td>
+            <td>${item.freq || '-'}<br><span class="text-xs text-gray-500">${item.time || '-'}</span></td>
+            <td>${useTypeMap[item.useType] || item.useType || '-'}</td>
+            <td><span class="tag ${st.class}">${st.text}</span></td>
+            <td>${item.notify || '-'}</td>
+            <td><span class="${dev.class}">${dev.text}</span></td>
+            <td>${item.startTime || '-'} ~ ${item.endTime || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="openMedicineDetail(${item.id})">详情</button>
+                <button class="btn btn-sm btn-warning" onclick="openElderAiMedicine(${item.id})">AI解读</button>
+                <button class="btn btn-sm btn-light" onclick="editMedicinePlan(${item.id})">编辑</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteMedicinePlan(${item.id})">删除</button>
+            </td>
+        </tr>`;
+    });
+}
+
+function renderMedicinePage() {
+    const total = medicineData.length;
+    const totalPages = Math.ceil(total / pageSize) || 1;
+
+    if (currentPage > totalPages) {
+        currentPage = totalPages;
+    }
+
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    const pageList = medicineData.slice(start, end);
+
+    renderMedicineTable(pageList);
+    renderMedicinePagination(total, totalPages);
+}
+
+function renderMedicinePagination(total, totalPages) {
+    const box = document.getElementById("medicinePagination");
+    if (!box) return;
+
+    let pageButtons = "";
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (
+            i === 1 ||
+            i === totalPages ||
+            Math.abs(i - currentPage) <= 2
+        ) {
+            pageButtons += `
+                <button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changeMedicinePage(${i})">
+                    ${i}
+                </button>
+            `;
+        } else if (
+            i === currentPage - 3 ||
+            i === currentPage + 3
+        ) {
+            pageButtons += `<span class="page-ellipsis">...</span>`;
+        }
+    }
+
+    box.innerHTML = `
+        <div class="page-info">
+            共 ${total} 条数据，第 ${currentPage} / ${totalPages} 页
+        </div>
+
+        <button class="page-btn" onclick="changeMedicinePage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>
+            上一页
+        </button>
+
+        ${pageButtons}
+
+        <button class="page-btn" onclick="changeMedicinePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+            下一页
+        </button>
+
+        <select class="page-size" onchange="changeMedicinePageSize(this.value)">
+            <option value="10" ${pageSize === 10 ? 'selected' : ''}>每页10条</option>
+            <option value="20" ${pageSize === 20 ? 'selected' : ''}>每页20条</option>
+            <option value="50" ${pageSize === 50 ? 'selected' : ''}>每页50条</option>
+        </select>
+    `;
+}
+
+function changeMedicinePage(page) {
+    const totalPages = Math.ceil(medicineData.length / pageSize) || 1;
+
+    if (page < 1 || page > totalPages) return;
+
+    currentPage = page;
+    renderMedicinePage();
+
+    const tableBox = document.querySelector(".table-box");
+    if (tableBox) {
+        tableBox.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+}
+
+function changeMedicinePageSize(size) {
+    pageSize = Number(size);
+    currentPage = 1;
+    renderMedicinePage();
+}
+function resetSearch(){
+    document.getElementById('searchElder').value = "";
+    document.getElementById('searchDrugType').value = "all";
+    document.getElementById('searchStatus').value = "all";
+    document.getElementById('searchDevice').value = "all";
+    currentTabType = "all";
+    document.querySelectorAll('.drug-tab').forEach(tab=>tab.classList.remove('active'));
+    document.querySelector('.drug-tab[data-type="all"]')?.classList.add('active');
+    loadMedicineList();
+}
+
+function openAddMedicinePlan(){
+    currentPlanId = null;
+    document.getElementById('medicinePlanModal').style.display="flex";
+    document.getElementById('planUseType').value = "long";
+    document.getElementById('planDose').value = "";
+    document.getElementById('planFreq').value = "每日1次";
+    document.getElementById('time1').value = "08:00";
+    document.getElementById('time2').value = "20:00";
+    document.getElementById('planNotifyMode').selectedIndex = 0;
+    document.getElementById('planStartTime').value = new Date().toISOString().slice(0,10);
+    document.getElementById('planEndTime').value = "";
+    document.getElementById('planDoctorAdvice').value = "";
+    document.getElementById('planRemark').value = "";
+}
+function closeMedicinePlanModal(){document.getElementById('medicinePlanModal').style.display="none";}
+function closeDetailModal(){document.getElementById('medicineDetailModal').style.display="none";}
+function closeAiModal(){document.getElementById('medicineAiModal').style.display="none";}
+
+async function saveMedicinePlan(){
+    const payload = getPlanPayload();
+    try {
+        const path = currentPlanId ? `/api/medicine/${currentPlanId}` : `/api/medicine`;
+        const method = currentPlanId ? 'PUT' : 'POST';
+        const res = await apiFetch(path, {
+            method,
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        closeMedicinePlanModal();
+        await loadMedicineList();
+        alert(result.msg || '保存成功');
+    } catch(err) {
+        alert(`保存失败：${err.message || err}`);
+    }
+}
+
+async function editMedicinePlan(id){
+    try{
+        const res = await apiFetch(`/api/medicine/${id}`);
+        const result = await res.json();
+        const item = result.data;
+        currentPlanId = id;
+        document.getElementById('medicinePlanModal').style.display="flex";
+        setSelectByNamePrefix('planElder', item.elderName);
+        document.getElementById('planUseType').value = item.useType || 'long';
+        setDrugSelectByName(item.drugName);
+        document.getElementById('planDose').value = item.dose || '';
+        document.getElementById('planFreq').value = item.freq || '每日1次';
+        const times = String(item.time || '').split('/').map(v=>v.trim());
+        document.getElementById('time1').value = times[0] || '08:00';
+        document.getElementById('time2').value = times[1] || '';
+        setSelectByText('planNotifyMode', item.notify);
+        document.getElementById('planStartTime').value = item.startTime || '';
+        document.getElementById('planEndTime').value = item.endTime && item.endTime !== '长期用药' ? item.endTime : '';
+        document.getElementById('planDoctorAdvice').value = item.doctorAdvice || '';
+        document.getElementById('planRemark').value = item.remark || '';
+    }catch(err){
+        alert(`读取编辑数据失败：${err.message || err}`);
+    }
+}
+function setSelectByNamePrefix(id, name){
+    const el = document.getElementById(id);
+    for(const opt of el.options){ if(opt.textContent.startsWith(name)){ el.value = opt.value || opt.textContent; return; } }
+}
+function setDrugSelectByName(drugName){
+    const el = document.getElementById('planDrug');
+    for(const opt of el.options){ if(!opt.disabled && opt.textContent.includes(drugName)){ el.value = opt.value || opt.textContent; return; } }
+}
+function setSelectByText(id, text){
+    const el = document.getElementById(id);
+    for(const opt of el.options){ if(opt.textContent === text){ el.value = opt.value || opt.textContent; return; } }
+}
+
+async function deleteMedicinePlan(id){
+    if(!confirm('确定删除该用药计划吗？')) return;
+    try{
+        const res = await apiFetch(`/api/medicine/${id}`, {method:'DELETE'});
+        const result = await res.json();
+        await loadMedicineList();
+        alert(result.msg || '删除成功');
+    }catch(err){
+        alert(`删除失败：${err.message || err}`);
+    }
+}
+
+async function openMedicineDetail(id){
+    try{
+        const res = await apiFetch(`/api/medicine/${id}`);
+        const result = await res.json();
+        const item = result.data;
+        const logs = result.logs || [];
+        const st = statusMap[item.status] || statusMap.wait;
+        const dev = deviceMap[item.deviceStatus] || deviceMap.online;
+        const logHtml = logs.map(log => {
+            const cls = log.status === 'on' ? 'text-success' : log.status === 'off' ? 'text-danger' : 'text-warning';
+            return `<div class="flex justify-between py-1 border-b"><span>${log.date}</span><span class="${cls}">${log.result}</span></div>`;
+        }).join('');
+        document.getElementById('detailCardBox').innerHTML = `
+        <div class="medicine-card">
+            <div class="card-title">${item.elderName}｜精细化用药全景卡片</div>
+            <div class="mb-2"><b>在用药品：</b>${item.drugName}</div>
+            <div class="mb-2"><b>精细分类：</b>${item.drugType}</div>
+            <div class="mb-2"><b>标准用量：</b>${item.dose}｜${item.freq}</div>
+            <div class="mb-2"><b>今日服药时间：</b>${item.time}</div>
+            <div class="mb-2"><b>当前状态：</b><span class="tag ${st.class}">${st.text}</span></div>
+            <div class="mb-2"><b>提醒渠道：</b>${item.notify}</div>
+            <div class="mb-2"><b>智能设备：</b><span class="${dev.class}">${dev.text}</span></div>
+            <div class="mb-2"><b>用药周期：</b>${item.startTime} 至 ${item.endTime}</div>
+            <div class="mb-2"><b>医生医嘱：</b>${item.doctorAdvice || '暂无'}</div>
+            <div class="mb-2"><b>禁忌备注：</b>${item.remark || '暂无'}</div>
+        </div>
+        <div class="mt-4 p-3 bg-blue-50 rounded-lg text-sm">
+            <div class="font-semibold text-blue-700 mb-2">📋 近期精细服药记录</div>
+            ${logHtml}
+        </div>
+        ${item.status === 'off' ? `<div class="mt-3 p-3 bg-red-50 rounded-lg text-sm text-danger">⚠️ 今日漏服，已多级推送：智能药盒声光告警 + 子女端消息 + 平台预警</div>` : ''}`;
+        document.getElementById('medicineDetailModal').style.display="flex";
+    }catch(err){
+        alert(`读取详情失败：${err.message || err}`);
+    }
+}
+
+async function openElderAiMedicine(id){
+    document.getElementById('medicineAiModal').style.display="flex";
+    document.getElementById('aiMedicineResult').innerText = "AI正在精细化分析药品子类、慢病匹配、药物冲突、禁忌风险...";
+    try{
+        const res = await apiFetch(`/api/medicine/ai/${id}`);
+        const result = await res.json();
+        document.getElementById('aiMedicineResult').innerText = result.data?.report || '暂无AI分析结果';
+    }catch(err){
+        document.getElementById('aiMedicineResult').innerText = `AI分析失败：${err.message || err}`;
+    }
+}
+
+function openGlobalAi(){
+    const total = document.getElementById('medicineTotal')?.innerText || '0';
+    const wait = document.getElementById('medicineWait')?.innerText || '0';
+    const off = document.getElementById('medicineOff')?.innerText || '0';
+    const device = document.getElementById('medicineDevice')?.innerText || '0';
+    const compliance = document.getElementById('medicineCompliance')?.innerText || '0%';
+    document.getElementById('medicineAiModal').style.display="flex";
+    document.getElementById('aiMedicineResult').innerText = `【全院精细化药品管理AI报告】\n1. 当前在用用药计划 ${total} 条，待服药 ${wait} 条，漏服告警 ${off} 条。\n2. 智能药盒/设备异常 ${device} 条，建议优先检修。\n3. 本周服药依从率约 ${compliance}，需重点关注漏服和暂停用药老人。\n4. 建议按降压、降糖、抗血栓、肠胃、骨关节等精细子类分区管理药品库存。`;
+}
+
+function exportMedicineExcel(){
+    window.open(`${API_BASE}/api/medicine/export`, '_blank');
+}
+
+function destroyCharts(){
+    if(statusChartInstance){ statusChartInstance.destroy(); statusChartInstance = null; }
+    if(drugChartInstance){ drugChartInstance.destroy(); drugChartInstance = null; }
+}
+function initChart(charts, list){
+    destroyCharts();
+    const statusDistribution = charts?.statusDistribution || {};
+    const categoryDistribution = charts?.categoryDistribution || {};
+    const statusData = [
+        statusDistribution['按时服药'] ?? list.filter(x=>x.status==='on').length,
+        statusDistribution['待服药'] ?? list.filter(x=>x.status==='wait').length,
+        statusDistribution['漏服'] ?? list.filter(x=>x.status==='off').length,
+        (statusDistribution['延后'] ?? 0) + (statusDistribution['补服'] ?? 0) + (statusDistribution['暂停'] ?? 0)
+    ];
+    const drugData = [
+        categoryDistribution['降压精细子类'] ?? list.filter(x=>(x.drugType||'').includes('降压')).length,
+        categoryDistribution['降糖精细子类'] ?? list.filter(x=>(x.drugType||'').includes('降糖')).length,
+        categoryDistribution['降脂心脑血管'] ?? list.filter(x=>(x.drugType||'').includes('降脂') || (x.drugType||'').includes('抗血栓')).length,
+        categoryDistribution['肠胃类'] ?? list.filter(x=>(x.drugType||'').includes('肠胃')).length,
+        categoryDistribution['骨关节全科'] ?? list.filter(x=>(x.drugType||'').includes('骨') || (x.drugType||'').includes('全科')).length
+    ];
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    statusChartInstance = new Chart(statusCtx,{
+        type:'doughnut',
+        data:{labels:['按时服药','待服药','漏服','延后/补服/暂停'],datasets:[{data:statusData,backgroundColor:['#10b981','#f59e0b','#ef4444','#94a3b8']}]},
+        options:{plugins:{title:{display:true,text:"今日服药状态分布"}}}
+    });
+    const drugCtx = document.getElementById('drugChart').getContext('2d');
+    drugChartInstance = new Chart(drugCtx,{
+        type:'bar',
+        data:{labels:['降压精细子类','降糖精细子类','降脂心脑血管','肠胃类','骨关节全科'],datasets:[{label:"在用数量",data:drugData,backgroundColor:'#3b82f6'}]},
+        options:{plugins:{title:{display:true,text:"精细药品分类使用统计"}}}
+    });
+}
+
+async function openDrugLib(){
+    document.getElementById('drugLibModal').style.display="flex";
+    await loadMedicineLibrary();
+}
+function closeDrugLibModal(){document.getElementById('drugLibModal').style.display="none";}
+
+function pickField(obj, keys, fallback = '-') {
+    for (const key of keys) {
+        if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+            return obj[key];
+        }
+    }
+    return fallback;
+}
+
+function normalizeLibraryItem(item) {
+    const rawType = pickField(item, ['drugType', 'drug_type', 'firstCategory', 'category'], '');
+    const rawSub = pickField(item, ['subCategory', 'sub_category', 'secondCategory', 'remark'], '');
+
+    let category = pickField(item, ['category', 'firstCategory'], '');
+    let subCategory = pickField(item, ['subCategory', 'sub_category', 'secondCategory'], '');
+
+    const text = String(rawType || '').replace(/[—–]/g, '-');
+
+    if ((!category || category === '-') && text.includes('-')) {
+        const parts = text.split('-').map(x => x.trim()).filter(Boolean);
+        category = parts[0] || '其他类';
+        subCategory = subCategory && subCategory !== '-' ? subCategory : (parts[1] || rawSub || '常规用药');
+    }
+
+    if (!category || category === '-') {
+        if (text.includes('降压')) category = '降压类';
+        else if (text.includes('降糖')) category = '降糖类';
+        else if (text.includes('抗血小板') || text.includes('抗血栓') || text.includes('调脂') || text.includes('降脂')) category = '降脂抗血栓类';
+        else if (text.includes('胃') || text.includes('肠')) category = '肠胃消化类';
+        else if (text.includes('骨') || text.includes('风湿') || text.includes('止痛')) category = '骨关节风湿止痛类';
+        else category = text || '其他类';
+    }
+
+    if (!subCategory || subCategory === '-') {
+        subCategory = rawSub || text || '常规用药';
+    }
+
+    return {
+        id: pickField(item, ['id'], ''),
+        drugName: pickField(item, ['drugName', 'drug_name'], '-'),
+        category,
+        subCategory,
+        spec: pickField(item, ['spec', 'dose'], '常规规格'),
+        usage: pickField(item, ['usage', 'useMethod', 'use_method'], '遵医嘱使用'),
+        contraindication: pickField(item, ['contraindication', 'taboo'], '请遵医嘱使用'),
+        stock: pickField(item, ['stock', 'stockCount', 'stock_count'], '充足'),
+        expireDate: pickField(item, ['expireDate', 'expire_date', 'validDate', 'valid_date'], '2027-12-31'),
+        status: pickField(item, ['status'], '正常'),
+        remark: pickField(item, ['remark'], '')
+    };
+}
+
+async function loadMedicineLibrary(){
+    const keyword = document.getElementById('drugLibKeyword')?.value.trim() || '';
+    const body = document.getElementById('drugLibTableBody');
+
+    try{
+        const res = await apiFetch(`/api/medicine/library/list?${new URLSearchParams({keyword}).toString()}`);
+        const result = await res.json();
+        const list = (result.data || []).map(normalizeLibraryItem);
+
+        body.innerHTML = list.map(item => {
+            const stockClass = String(item.stock).includes('不足') || Number(item.stock) < 50 ? 'text-warning' : 'text-success';
+            const statusClass = String(item.status).includes('正常') ? 'tag-on' : 'tag-off';
+
+            const itemJson = JSON.stringify(item).replace(/'/g, "&#39;");
+
+            return `
+                <tr>
+                    <td>${item.drugName}</td>
+                    <td>${item.category}</td>
+                    <td>${item.subCategory}</td>
+                    <td>${item.spec}</td>
+                    <td>${item.contraindication}</td>
+                    <td class="${stockClass}">${item.stock}</td>
+                    <td>${item.expireDate}</td>
+                    <td><span class="tag ${statusClass}">${item.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-light" onclick='openDrugLibraryEdit(${itemJson})'>编辑</button>
+                    </td>
+                </tr>
+            `;
+        }).join('') || `<tr><td colspan="9" style="text-align:center;padding:36px;color:#94a3b8;">暂无药品库数据</td></tr>`;
+
+    }catch(err){
+        body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:36px;color:#ef4444;">药品库接口失败：${err.message || err}</td></tr>`;
+    }
+}
+
+async function addDrugLibraryPrompt(){
+    currentDrugLibItem = null;
+
+    document.getElementById('drugEditId').value = '';
+    document.getElementById('drugEditName').value = '';
+    document.getElementById('drugEditCategory').value = '降压类';
+    document.getElementById('drugEditSubCategory').value = 'ARB降压药';
+    document.getElementById('drugEditSpec').value = '';
+    document.getElementById('drugEditStock').value = '充足';
+    document.getElementById('drugEditExpireDate').value = '2027-12-31';
+    document.getElementById('drugEditStatus').value = '正常';
+    document.getElementById('drugEditUsage').value = '遵医嘱使用';
+    document.getElementById('drugEditContraindication').value = '请按医嘱使用';
+    document.getElementById('drugEditRemark').value = '';
+
+    document.getElementById('drugLibraryEditModal').style.display = 'flex';
+}
+
+function openDrugLibraryEdit(item){
+    currentDrugLibItem = item;
+
+    document.getElementById('drugEditId').value = item.id || '';
+    document.getElementById('drugEditName').value = item.drugName || '';
+    document.getElementById('drugEditCategory').value = item.category || '其他类';
+    document.getElementById('drugEditSubCategory').value = item.subCategory || '常规用药';
+    document.getElementById('drugEditSpec').value = item.spec || '';
+    document.getElementById('drugEditStock').value = item.stock || '充足';
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(item.expireDate || '')) {
+        document.getElementById('drugEditExpireDate').value = item.expireDate;
+    } else {
+        document.getElementById('drugEditExpireDate').value = '2027-12-31';
+    }
+
+    document.getElementById('drugEditStatus').value = item.status || '正常';
+    document.getElementById('drugEditUsage').value = item.usage || '遵医嘱使用';
+    document.getElementById('drugEditContraindication').value = item.contraindication || '';
+    document.getElementById('drugEditRemark').value = item.remark || item.subCategory || '';
+
+    document.getElementById('drugLibraryEditModal').style.display = 'flex';
+}
+
+function closeDrugLibraryEditModal(){
+    document.getElementById('drugLibraryEditModal').style.display = 'none';
+}
+
+async function saveDrugLibraryEdit(){
+    const id = document.getElementById('drugEditId').value;
+    const drugName = document.getElementById('drugEditName').value.trim();
+    const category = document.getElementById('drugEditCategory').value.trim() || '其他类';
+    const subCategory = document.getElementById('drugEditSubCategory').value.trim() || '常规用药';
+    const spec = document.getElementById('drugEditSpec').value.trim() || '常规规格';
+    const stock = document.getElementById('drugEditStock').value.trim() || '充足';
+    const expireDate = document.getElementById('drugEditExpireDate').value || '2027-12-31';
+    const status = document.getElementById('drugEditStatus').value || '正常';
+    const usage = document.getElementById('drugEditUsage').value.trim() || '遵医嘱使用';
+    const contraindication = document.getElementById('drugEditContraindication').value.trim() || '请遵医嘱使用';
+    const remark = document.getElementById('drugEditRemark').value.trim() || subCategory;
+
+    if(!drugName){
+        alert('请填写药品名称');
+        return;
+    }
+
+    const payload = {
+        drug_name: drugName,
+        drug_type: `${category}-${subCategory}`,
+        spec: spec,
+        usage: usage,
+        contraindication: contraindication,
+        remark: remark,
+        stock: stock,
+        expire_date: expireDate,
+        status: status
+    };
+
+    try{
+        const path = id ? `/api/medicine/library/${id}` : '/api/medicine/library';
+        const method = id ? 'PUT' : 'POST';
+
+        const res = await apiFetch(path, {
+            method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        closeDrugLibraryEditModal();
+        await loadMedicineLibrary();
+        alert(result.msg || '药品库保存成功');
+    }catch(err){
+        alert(`药品库保存失败：${err.message || err}`);
+    }
+}
+
+document.querySelectorAll('.drug-tab').forEach(tab=>{
+    tab.addEventListener('click',function(){
+        document.querySelectorAll('.drug-tab').forEach(t=>t.classList.remove('active'));
+        this.classList.add('active');
+        currentTabType = this.dataset.type || 'all';
+        loadMedicineList();
+    });
+});
+
+window.onload = function(){
+    loadMedicineList();
+};
+</script>
+</body>
+</html>

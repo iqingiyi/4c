@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康趋势分析 - 智护颐年智慧养老平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-light: #eff6ff;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --purple: #7e22ce;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-500: #6b7280;
+            --gray-700: #374151;
+            --dark-bg: #1f2937;
+            --dark-card: #273444;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --shadow-hover: 0 6px 24px rgba(0,0,0,0.12);
+            --transition: all 0.25s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: var(--transition);
+        }
+
+        body {
+            font-family: "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: var(--gray-700);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        body.dark {
+            background-color: var(--dark-bg);
+            color: #e5e7eb;
+        }
+        body.dark .card,
+        body.dark .filter-box,
+        body.dark .explain-card,
+        body.dark .chart-box,
+        body.dark .top-nav,
+        body.dark .sidebar {
+            background-color: var(--dark-card);
+            color: #e5e7eb;
+        }
+        body.dark .conclusion-box {
+            background-color: #23344b;
+            border-color: #374151;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 190px;
+            background: #fff;
+            border-right: 1px solid var(--gray-200);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 16px 0;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+        .logo {
+            padding: 0 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 20px;
+        }
+        .logo-text h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .logo-text p {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: var(--gray-500);
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .menu-item:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .menu-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-right: 3px solid var(--primary);
+        }
+        .menu-item .badge {
+            margin-left: auto;
+            background: var(--danger);
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+        .submenu {
+            display: none;
+            overflow: hidden;
+        }
+        .submenu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px 10px 36px;
+            color: var(--gray-500);
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .submenu-item:hover {
+            background: var(--gray-100);
+            color: var(--primary);
+        }
+        .submenu-item.active {
+            color: var(--primary);
+            font-weight: 500;
+        }
+        .menu-arrow {
+            margin-left: auto;
+            font-size: 12px;
+            transition: var(--transition);
+        }
+        .menu-arrow.open {
+            transform: rotate(90deg);
+        }
+        .ai-assistant {
+            position: sticky;
+            bottom: 16px;
+            margin: 12px;
+            background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            border: 1px solid #bfdbfe;
+        }
+        .ai-assistant h3 {
+            font-size: 13.5px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: #1e40af;
+        }
+        .ai-assistant p {
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-bottom: 10px;
+        }
+        .ai-assistant button {
+            width: 100%;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 9px;
+            font-size: 12.5px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* 顶部导航 */
+        .main-content {
+            margin-left: 190px;
+        }
+        .top-nav {
+            background: #fff;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .nav-menu {
+            display: flex;
+            gap: 32px;
+        }
+        .nav-menu a {
+            text-decoration: none;
+            color: var(--gray-500);
+            font-size: 14px;
+            font-weight: 500;
+            padding: 6px 0;
+        }
+        .nav-menu a.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        .nav-notification {
+            position: relative;
+            font-size: 18px;
+            color: var(--gray-500);
+        }
+        .nav-notification .badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 10px;
+        }
+        .nav-time, .nav-weather {
+            font-size: 13px;
+            color: var(--gray-500);
+        }
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .nav-user img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--gray-200);
+        }
+
+        /* 内容区 */
+        .content {
+            padding: 20px 28px;
+        }
+        .breadcrumb {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 16px;
+        }
+        .breadcrumb a {
+            color: var(--gray-500);
+            text-decoration: none;
+        }
+        .breadcrumb span {
+            color: var(--primary);
+            font-weight: 500;
+        }
+        .info-bar {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .filter-box {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+        }
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-item label {
+            font-size: 13px;
+            color: var(--gray-500);
+            white-space: nowrap;
+        }
+        .filter-item select,
+        .filter-item input {
+            padding: 8px 12px;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            min-width: 120px;
+            outline: none;
+        }
+        .filter-item select:focus,
+        .filter-item input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+            box-shadow: 0 3px 10px rgba(59,130,246,0.25);
+        }
+        .btn-light {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+        .btn-light:hover {
+            background: var(--gray-200);
+        }
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #059669;
+            box-shadow: 0 3px 10px rgba(16,185,129,0.25);
+        }
+
+        /* 指标卡片 */
+        .trend-card-row {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .trend-card {
+            background: #fff;
+            border-radius: var(--radius-md);
+            padding: 18px;
+            border-left: 4px solid var(--primary);
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+        .trend-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+        .trend-card-title {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 8px;
+        }
+        .trend-card-num {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .trend-card-desc {
+            font-size: 12px;
+            margin-top: 6px;
+            display: flex;
+            gap: 10px;
+        }
+        .up {
+            color: var(--success);
+        }
+        .down {
+            color: var(--danger);
+        }
+        .flat {
+            color: var(--gray-500);
+        }
+
+        /* 图表容器 + 修复无限拉长BUG */
+        .chart-box {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+            position: relative;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+        .chart-box:hover {
+            box-shadow: var(--shadow-md);
+        }
+        /* 关键修复：限制画布高度，禁止无限向下延伸 */
+        .chart-box canvas {
+            max-height: 260px !important;
+            width: 100% !important;
+            object-fit: contain;
+        }
+        .grid-col-2 .chart-box canvas,
+        .grid-col-3 .chart-box canvas {
+            max-height: 240px !important;
+        }
+
+        h4 {
+            font-size: 15px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .grid-col-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .grid-col-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        /* 说明卡片 */
+        .explain-card {
+            background: #fff;
+            border-radius: var(--radius-md);
+            padding: 18px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .explain-item {
+            display: inline-block;
+            background: var(--gray-100);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            margin: 0 8px 8px 0;
+            color: var(--gray-700);
+        }
+
+        /* 图表工具栏 */
+        .chart-tool {
+            position: absolute;
+            top: 16px;
+            right: 24px;
+            display: flex;
+            gap: 10px;
+        }
+        .chart-tool button {
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .chart-tool button:hover {
+            color: var(--primary);
+        }
+
+        /* 研判结论 */
+        .conclusion-box {
+            background: #f0f7ff;
+            border-radius: var(--radius-md);
+            padding: 18px;
+            border: 1px solid #bfdbfe;
+            margin-bottom: 20px;
+        }
+        .conclusion-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e40af;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .conclusion-text {
+            font-size: 13px;
+            color: var(--gray-700);
+            line-height: 1.8;
+        }
+
+        /* 加载、水印、回到顶部 */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+        }
+        .watermark {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 11px;
+            color: var(--gray-300);
+            user-select: none;
+        }
+        .back-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-md);
+            z-index: 99;
+        }
+        .collapse-btn {
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--primary);
+        }
+
+        /* 空数据样式 */
+        .empty-wrap {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--gray-500);
+        }
+        .empty-wrap i {
+            font-size: 48px;
+            margin-bottom: 12px;
+            color: var(--gray-300);
+        }
+    </style>
+</head>
+<body>
+<div class="loading" id="loading">
+    <div><i class="fa fa-spinner fa-spin" style="font-size:30px;color:var(--primary)"></i><div style="margin-top:10px">数据加载中...</div></div>
+</div>
+
+<!-- 侧边栏 -->
+<div class="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-heartbeat"></i></div>
+        <div class="logo-text"><h1>智护颐年</h1><p>智慧养老服务资源调度平台</p></div>
+    </div>
+    <div class="menu">
+        <a href="#" class="menu-item"><i class="fa fa-home"></i><span>首页总览</span></a>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-user-o"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="index2.1.html" class="submenu-item">老人档案管理</a>
+            <a href="index2.2.html" class="submenu-item">失能等级评估</a>
+            <a href="index2.3.html" class="submenu-item">特殊老人管理</a>
+            <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
+            <a href="index2.5.html" class="submenu-item">老人台账统计</a>
+        </div>
+        <div class="menu-item active" onclick="toggleSubmenu(this)">
+            <i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow open"></i>
+        </div>
+        <div class="submenu" style="display:block;">
+            <a href="#" class="submenu-item">实时健康数据</a>
+            <a href="#" class="submenu-item">慢病专项管理</a>
+            <a href="#" class="submenu-item">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item active">健康趋势分析</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时告警中心</a>
+            <a href="#" class="submenu-item">跌倒/离床预警</a>
+            <a href="#" class="submenu-item">电子围栏管控</a>
+            <a href="#" class="submenu-item">居家安防预警</a>
+            <a href="#" class="submenu-item">预警处置闭环</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-calendar-check-o"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">工单智能派单</a>
+            <a href="#" class="submenu-item">上门服务管理</a>
+            <a href="#" class="submenu-item">照护计划定制</a>
+            <a href="#" class="submenu-item">服务评价管理</a>
+            <a href="#" class="submenu-item">服务时长监管</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">护理人员档案</a>
+            <a href="#" class="submenu-item">排班考勤管理</a>
+            <a href="#" class="submenu-item">资质证书管理</a>
+            <a href="#" class="submenu-item">绩效考核管理</a>
+            <a href="#" class="submenu-item">培训学习管理</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">设备统一接入</a>
+            <a href="#" class="submenu-item">穿戴设备监控</a>
+            <a href="#" class="submenu-item">居家智能硬件</a>
+            <a href="#" class="submenu-item">设备故障报修</a>
+            <a href="#" class="submenu-item">设备数据统计</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">AI健康研判</a>
+            <a href="#" class="submenu-item">AI智能派单</a>
+            <a href="#" class="submenu-item">反诈智能防护</a>
+            <a href="#" class="submenu-item">情绪AI识别</a>
+            <a href="#" class="submenu-item">智能营养配餐</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">高龄补贴审核</a>
+            <a href="#" class="submenu-item">护理补贴发放</a>
+            <a href="#" class="submenu-item">服务费用管理</a>
+            <a href="#" class="submenu-item">财务对账报表</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-heart-o"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">上门探访记录</a>
+            <a href="#" class="submenu-item">心理慰藉服务</a>
+            <a href="#" class="submenu-item">社区活动管理</a>
+            <a href="#" class="submenu-item">节日关怀慰问</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">全域养老看板</a>
+            <a href="#" class="submenu-item">人口结构分析</a>
+            <a href="#" class="submenu-item">风险分布统计</a>
+            <a href="#" class="submenu-item">民政上报报表</a>
+        </div>
+        <a href="#" class="menu-item"><i class="fa fa-bell-o"></i><span>消息通知中心</span><span class="badge">8</span></a>
+        <div class="menu-item" onclick="toggleSubmenu(this)">
+            <i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i>
+        </div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">区域组织管理</a>
+            <a href="#" class="submenu-item">账号角色管理</a>
+            <a href="#" class="submenu-item">菜单权限配置</a>
+            <a href="#" class="submenu-item">操作日志查询</a>
+            <a href="#" class="submenu-item">数据备份恢复</a>
+        </div>
+    </div>
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3>
+        <p>为您提供智能决策建议</p>
+        <button onclick="openAiTrend()">立即咨询</button>
+    </div>
+</div>
+
+<!-- 顶部导航 -->
+<div class="main-content">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button style="background:none;border:none;font-size:18px;color:var(--gray-500)"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="#">实时健康数据</a>
+                <a href="#">慢病专项管理</a>
+                <a href="#">用药管理</a>
+                <a href="#">体检记录</a>
+                <a href="#" class="active">健康趋势分析</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-notification"><i class="fa fa-bell-o"></i><span class="badge">12</span></div>
+            <div class="nav-time" id="currentTime"></div>
+            <div class="nav-weather"><i class="fa fa-sun-o"></i><span>26℃ 多云</span></div>
+            <div class="nav-user"><img src="" alt="头像"><span>管理员 <i class="fa fa-angle-down"></i></span></div>
+            <button class="btn btn-light" onclick="toggleDark()"><i class="fa fa-moon-o"></i></button>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- 面包屑 -->
+        <div class="breadcrumb">
+            <a href="#">首页</a>
+            <span> / </span>
+            <a href="#">健康监测管理</a>
+            <span> / </span>
+            <span>健康趋势分析</span>
+        </div>
+
+        <div class="info-bar">
+            <div>
+                <i class="fa fa-database"></i> 当前统计范围：全域在册老人｜有效监测样本：12689人｜数据更新截止：2026-04-26 09:30
+            </div>
+            <div class="collapse-btn" onclick="toggleAllChart()"><i class="fa fa-compress"></i> 收起/展开全部模块</div>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="filter-box">
+            <div class="filter-item">
+                <label><i class="fa fa-calendar"></i> 统计维度</label>
+                <select id="timeType">
+                    <option>月度趋势</option>
+                    <option>季度趋势</option>
+                    <option>年度趋势</option>
+                    <option>五年长期演化</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label><i class="fa fa-map-marker"></i> 所属辖区</label>
+                <select id="areaId">
+                    <option value="all">全域总览</option>
+                   <option value="幸福里小区">幸福里小区</option>
+                    <option value="阳光小区">阳光小区</option>
+                     <option value="花园社区">花园社区</option>
+                     <option value="一号康养楼">一号康养楼</option>
+                     <option value="二号护理楼">二号护理楼</option>
+                      <option value="康复中心">康复中心</option>
+</select>
+            </div>
+            <div class="filter-item">
+                <label><i class="fa fa-users"></i> 年龄分段</label>
+                <select id="ageRange">
+                    <option>全部年龄段</option>
+                    <option>70-74岁</option>
+                    <option>75-79岁</option>
+                    <option>80岁以上</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label><i class="fa fa-stethoscope"></i> 健康类型</label>
+                <select id="healthType">
+                    <option>全维度健康</option>
+                    <option>心脑血管</option>
+                    <option>代谢慢病</option>
+                    <option>肝肾功能</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="getTrendData()"><i class="fa fa-bar-chart"></i> 生成趋势分析</button>
+            <button class="btn btn-light" onclick="trendExcelImport()"><i class="fa fa-upload"></i> 导入历史Excel</button>
+            <button class="btn btn-light" onclick="exportReport()"><i class="fa fa-download"></i> 导出报表</button>
+            <button class="btn btn-success" onclick="printPage()"><i class="fa fa-print"></i> 打印PDF</button>
+            <button class="btn btn-light" onclick="resetFilter()"><i class="fa fa-refresh"></i> 重置</button>
+        </div>
+
+        <!-- 指标说明 -->
+        <div class="explain-card">
+            <h4><i class="fa fa-book text-primary"></i> 健康指标释义 & 正常参考范围</h4>
+            <div>
+                <span class="explain-item">🔹 收缩压正常：90~130mmHg</span>
+                <span class="explain-item">🔹 空腹血糖正常：3.9~6.1mmol/L</span>
+                <span class="explain-item">🔹 健康综合指数：0~100分，分值越高健康状态越好</span>
+                <span class="explain-item">🔹 等级标识：绿色健康｜黄色关注｜橙色预警｜红色高危</span>
+                <span class="explain-item">🔹 统计口径：整合穿戴监测+季度体检+上门巡检多源数据</span>
+            </div>
+        </div>
+
+        <!-- 数据指标卡片 -->
+        <div class="trend-card-row">
+            <div class="trend-card">
+                <div class="trend-card-title">老龄健康综合指数</div>
+                <div class="trend-card-num" id="card_healthScore">78.6</div>
+                <div class="trend-card-desc up"><i class="fa fa-arrow-up"></i> 同比 +2.3% <span class="flat">环比 +0.5%</span></div>
+            </div>
+            <div class="trend-card">
+                <div class="trend-card-title">健康好转逆转率</div>
+                <div class="trend-card-num" id="card_improveRate">18.2%</div>
+                <div class="trend-card-desc up"><i class="fa fa-arrow-up"></i> 同比 +1.1% <span class="up">环比 +1.6%</span></div>
+            </div>
+            <div class="trend-card">
+                <div class="trend-card-title">健康恶化衰退率</div>
+                <div class="trend-card-num" id="card_worseRate">9.7%</div>
+                <div class="trend-card-desc down"><i class="fa fa-arrow-down"></i> 同比 -1.0% <span class="down">环比 -0.8%</span></div>
+            </div>
+            <div class="trend-card">
+                <div class="trend-card-title">慢病共病发生率</div>
+                <div class="trend-card-num" id="card_chronicRate">36.5%</div>
+                <div class="trend-card-desc down"><i class="fa fa-arrow-down"></i> 同比 -1.2% <span class="flat">环比 持平</span></div>
+            </div>
+            <div class="trend-card">
+                <div class="trend-card-title">器官异常检出率</div>
+                <div class="trend-card-num" id="card_organRate">27.1%</div>
+                <div class="trend-card-desc down"><i class="fa fa-arrow-down"></i> 同比 -0.7% <span class="down">环比 -0.5%</span></div>
+            </div>
+            <div class="trend-card">
+                <div class="trend-card-title">高危人群增长速度</div>
+                <div class="trend-card-num" id="card_highRiskRate">6.3%</div>
+                <div class="trend-card-desc up"><i class="fa fa-arrow-up"></i> 同比 +0.4% <span class="flat">环比 持平</span></div>
+            </div>
+            <div class="trend-card">
+                <div class="trend-card-title">快速衰退人群占比</div>
+                <div class="trend-card-num" id="card_declineRate">4.8%</div>
+                <div class="trend-card-desc down"><i class="fa fa-arrow-down"></i> 同比 -0.5% <span class="down">环比 -0.3%</span></div>
+            </div>
+            <div class="trend-card">
+                <div class="trend-card-title">康养干预有效率</div>
+                <div class="trend-card-num" id="card_interveneRate">82.4%</div>
+                <div class="trend-card-desc up"><i class="fa fa-arrow-up"></i> 同比 +2.7% <span class="up">环比 +1.2%</span></div>
+            </div>
+        </div>
+
+        <!-- 核心指标趋势 -->
+        <div class="chart-box">
+            <div class="chart-tool">
+                <button onclick="downChart('vitalTrendChart')"><i class="fa fa-download"></i> 下载</button>
+                <button onclick="fullChart(this)"><i class="fa fa-expand"></i> 全屏</button>
+            </div>
+            <h4><i class="fa fa-line-chart text-primary"></i> 核心健康指标时序演化趋势（含健康标准警戒线）</h4>
+            <canvas id="vitalTrendChart"></canvas>
+        </div>
+
+        <div class="grid-col-2">
+            <div class="chart-box">
+                <div class="chart-tool">
+                    <button onclick="downChart('organTrendChart')"><i class="fa fa-download"></i></button>
+                </div>
+                <h4><i class="fa fa-heart text-danger"></i> 人体器官系统分层健康趋势</h4>
+                <canvas id="organTrendChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <div class="chart-tool">
+                    <button onclick="downChart('levelShiftChart')"><i class="fa fa-download"></i></button>
+                </div>
+                <h4><i class="fa fa-exchange text-warning"></i> 健康风险等级跃迁流转分析</h4>
+                <canvas id="levelShiftChart"></canvas>
+            </div>
+        </div>
+
+        <div class="grid-col-2">
+            <div class="chart-box">
+                <div class="chart-tool">
+                    <button onclick="downChart('chronicChart')"><i class="fa fa-download"></i></button>
+                </div>
+                <h4><i class="fa fa-stethoscope text-success"></i> 慢病共病组合演化趋势</h4>
+                <canvas id="chronicChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <div class="chart-tool">
+                    <button onclick="downChart('abnormalChart')"><i class="fa fa-download"></i></button>
+                </div>
+                <h4><i class="fa fa-bolt text-danger"></i> 高频异常指标动态溯源趋势</h4>
+                <canvas id="abnormalChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-box">
+            <div class="chart-tool">
+                <button onclick="downChart('warnTrendChart')"><i class="fa fa-download"></i></button>
+            </div>
+            <h4><i class="fa fa-exclamation-triangle text-warning"></i> 健康类风险告警月度趋势统计</h4>
+            <canvas id="warnTrendChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <div class="chart-tool">
+                <button onclick="downChart('interventionChart')"><i class="fa fa-download"></i></button>
+            </div>
+            <h4><i class="fa fa-hand-paper-o text-success"></i> 康养干预服务覆盖 & 改善效果趋势</h4>
+            <canvas id="interventionChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <div class="chart-tool">
+                <button onclick="downChart('seasonChart')"><i class="fa fa-download"></i></button>
+            </div>
+            <h4><i class="fa fa-leaf text-success"></i> 四季气候环境关联健康异常波动分析</h4>
+            <canvas id="seasonChart"></canvas>
+        </div>
+
+        <div class="grid-col-3">
+            <div class="chart-box">
+                <h4><i class="fa fa-users text-primary"></i> 年龄段健康差异趋势</h4>
+                <canvas id="ageGroupChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h4><i class="fa fa-venus-mars text-purple"></i> 性别健康差异对比</h4>
+                <canvas id="genderChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h4><i class="fa fa-map-marker text-primary"></i> 辖区健康横向对比</h4>
+                <canvas id="areaChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-box">
+            <div class="chart-tool">
+                <button onclick="downChart('aiForecastChart')"><i class="fa fa-download"></i> 下载</button>
+            </div>
+            <h4><i class="fa fa-rocket text-primary"></i> AI智能推演·未来12个月健康趋势预测</h4>
+            <canvas id="aiForecastChart"></canvas>
+        </div>
+
+        <!-- AI研判小结 -->
+        <div class="conclusion-box">
+            <div class="conclusion-title"><i class="fa fa-lightbulb-o"></i> 平台智能健康研判小结</div>
+            <div class="conclusion-text" id="aiConclusion">
+                1. 全域老人整体健康综合指数稳步上行，常态化康养干预、慢病随访服务落地成效显著；<br>
+                2. 秋冬低温换季阶段，心脑血管类指标异常峰值明显抬升，需提前开展季节性健康宣教与重点人群加密监测；<br>
+                3. 85岁以上高龄、独居、失能半失能群体异常检出率偏高，为长期重点关怀与管控对象；<br>
+                4. 慢病共病占比呈缓慢上行趋势，需强化多慢病联合管理、定期复查与个性化用药指导；<br>
+                5. AI模型预测未来半年全域健康走势整体平稳可控，高危人群增速放缓，整体养老健康风险处于合理区间。
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- 回到顶部 -->
+<div class="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <i class="fa fa-arrow-up"></i>
+</div>
+
+<div class="watermark">智慧养老健康大数据分析系统 © 2026 承建单位</div>
+
+<script>
+// ==============================================
+// 3.5 健康趋势分析 - 后端接口配置
+// ==============================================
+const API_HOST = "http://127.0.0.1:8000";
+
+const API = {
+  overview: API_HOST + "/api/health-trend/overview",
+  charts: API_HOST + "/api/health-trend/charts",
+  list: API_HOST + "/api/health-trend/list",
+  aiSummary: API_HOST + "/api/health-trend/ai-summary",
+  export: API_HOST + "/api/health-trend/export"
+};
+
+function getParams() {
+  return {
+    timeType: document.getElementById("timeType")?.value || "月度趋势",
+    areaId: document.getElementById("areaId")?.value || "all",
+    ageRange: document.getElementById("ageRange")?.value || "全部年龄段",
+    healthType: document.getElementById("healthType")?.value || "全维度健康"
+  };
+}
+
+// 保存所有图表实例，防止重复渲染报错
+let trendChartInstances = [];
+
+// ==============================================
+// 通用工具函数
+// ==============================================
+function showLoading(){
+  document.getElementById('loading').style.display = 'flex';
+}
+
+function hideLoading(){
+  document.getElementById('loading').style.display = 'none';
+}
+
+function average(arr) {
+  if (!arr || !arr.length) return 75;
+  return Number((arr.reduce((a, b) => a + Number(b || 0), 0) / arr.length).toFixed(1));
+}
+
+function destroyTrendCharts() {
+  trendChartInstances.forEach(chart => {
+    if (chart) chart.destroy();
+  });
+  trendChartInstances = [];
+}
+
+function saveChart(chart) {
+  trendChartInstances.push(chart);
+  return chart;
+}
+
+async function fetchApi(url, params = {}) {
+  try {
+    const finalParams = {
+      ...params,
+      _t: Date.now()
+    };
+
+    const query = new URLSearchParams(finalParams).toString();
+    const fullUrl = `${url}?${query}`;
+
+    console.log("【健康趋势请求】", fullUrl);
+
+    const res = await fetch(fullUrl, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    if (!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+    const data = await res.json();
+
+    console.log("【健康趋势返回】", data);
+
+    return data.code === 200 ? data.data : null;
+  } catch (e) {
+    console.error("健康趋势接口连接失败：", e);
+    return null;
+  }
+}
+
+// ==============================================
+// 页面主加载函数
+// ==============================================
+async function getTrendData() {
+  showLoading();
+
+  try {
+    const params = getParams();
+
+    const overview = await fetchApi(API.overview, params);
+    const charts = await fetchApi(API.charts, params);
+    const ai = await fetchApi(API.aiSummary, params);
+
+    if (!overview) {
+      throw new Error("overview 接口无有效数据");
+    }
+
+    if (!charts) {
+      throw new Error("charts 接口无有效数据");
+    }
+
+    renderOverviewCards(overview);
+    renderAllTrendCharts(charts);
+
+    if (ai && ai.report) {
+      document.getElementById("aiConclusion").innerHTML = ai.report;
+    }
+
+  } catch (err) {
+    console.error("健康趋势加载失败：", err);
+    alert("健康趋势数据获取失败或图表渲染出错，请按 F12 查看 Console 报错");
+  } finally {
+    hideLoading();
+  }
+}
+
+// ==============================================
+// 顶部卡片渲染
+// ==============================================
+function renderOverviewCards(data) {
+  document.getElementById("card_healthScore").innerText = data.avgScore ?? 0;
+  document.getElementById("card_improveRate").innerText = `${data.good ?? 0}人`;
+  document.getElementById("card_worseRate").innerText = `${data.trendDown ?? 0}人`;
+  document.getElementById("card_chronicRate").innerText = `${data.stable ?? 0}人`;
+  document.getElementById("card_organRate").innerText = `${data.warning ?? 0}人`;
+  document.getElementById("card_highRiskRate").innerText = `${data.highRisk ?? 0}人`;
+  document.getElementById("card_declineRate").innerText = `${data.trendDown ?? 0}人`;
+  document.getElementById("card_interveneRate").innerText = `${100 - (data.attentionRate ?? 0)}%`;
+}
+
+// ==============================================
+// 图表总渲染入口
+// ==============================================
+function renderAllTrendCharts(data) {
+  destroyTrendCharts();
+
+  const months = Object.keys(data.monthlyScore || {});
+  const monthlyScore = Object.values(data.monthlyScore || {});
+
+  const trendLabels = Object.keys(data.trendCount || {});
+  const trendValues = Object.values(data.trendCount || {});
+
+  const ageLabels = Object.keys(data.ageScore || {});
+  const ageValues = Object.values(data.ageScore || {});
+
+  const chronicLabels = Object.keys(data.chronicCount || {});
+  const chronicValues = Object.values(data.chronicCount || {});
+
+  const areaLabels = Object.keys(data.areaAvgScore || {});
+  const areaValues = Object.values(data.areaAvgScore || {});
+
+  const avgScore = average(monthlyScore);
+
+  renderVital({
+    months: months.length ? months : ["1月", "2月", "3月", "4月", "5月", "6月"],
+    sbp: monthlyScore.length ? monthlyScore.map(v => Math.round(120 + (100 - v) * 0.4)) : [132, 134, 136, 138, 136, 135],
+    glu: monthlyScore.length ? monthlyScore.map(v => Number((4.8 + (100 - v) * 0.03).toFixed(1))) : [5.1, 5.2, 5.3, 5.4, 5.3, 5.2],
+    score: monthlyScore.length ? monthlyScore : [78, 79, 80, 81, 82, 83]
+  });
+
+  renderOrgan({
+    labels: ["血压管理", "血糖管理", "用药依从", "体检完成", "慢病控制", "生活能力"],
+    lastYear: [68, 66, 70, 72, 65, 74],
+    currentYear: [
+      avgScore,
+      avgScore - 3,
+      avgScore + 5,
+      avgScore + 2,
+      avgScore - 5,
+      avgScore
+    ]
+  });
+
+  renderLevel({
+    labels: trendLabels.length ? trendLabels : ["持续良好", "基本稳定", "波动观察", "明显下降"],
+    values: trendValues.length ? trendValues : [0, 0, 0, 0]
+  });
+
+  renderChronic({
+    labels: chronicLabels.length ? chronicLabels : ["暂无慢病"],
+    single: chronicValues.length ? chronicValues : [0],
+    double: chronicValues.length ? chronicValues.map(v => Math.round(v * 0.6)) : [0],
+    multi: chronicValues.length ? chronicValues.map(v => Math.round(v * 0.3)) : [0]
+  });
+
+  renderAbnormal({
+    labels: months.length ? months : ["1月", "2月", "3月", "4月", "5月", "6月"],
+    bp: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round(100 - v))) : [20, 22, 25, 24, 21, 19],
+    glu: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.7))) : [16, 18, 20, 19, 17, 15],
+    fat: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.5))) : [12, 14, 15, 14, 13, 12]
+  });
+
+  renderWarn({
+    months: months.length ? months : ["1月", "2月", "3月", "4月", "5月", "6月"],
+    bp: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.8))) : [18, 20, 22, 21, 19, 17],
+    glu: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.6))) : [12, 14, 16, 15, 13, 12],
+    hr: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.4))) : [8, 9, 10, 10, 9, 8]
+  });
+
+  renderIntervention({
+    months: months.length ? months : ["1月", "2月", "3月", "4月", "5月", "6月"],
+    count: monthlyScore.length ? monthlyScore.map(v => Math.round(v * 1.5)) : [100, 120, 140, 160, 180, 200],
+    effect: monthlyScore.length ? monthlyScore : [72, 74, 76, 78, 80, 82]
+  });
+
+  renderSeason({
+    heart: [18, 12, 26, 35],
+    meta: [22, 28, 24, 20],
+    all: [20, 19, 25, 30]
+  });
+
+  renderGroup({
+    ageLabels: ageLabels.length ? ageLabels : ["70-74岁", "75-79岁", "80-84岁", "85岁以上"],
+    ageValues: ageValues.length ? ageValues : [72, 68, 63, 58],
+    male: 50,
+    female: 50,
+    areaLabels: areaLabels.length ? areaLabels : ["一区", "二区", "三区"],
+    areaValues: areaValues.length ? areaValues : [70, 72, 68]
+  });
+
+  renderAiForecast({
+    labels: ["当前", "1月后", "3月后", "6月后", "9月后", "12月后"],
+    real: [avgScore, avgScore + 1, null, null, null, null],
+    predict: [
+      avgScore,
+      avgScore + 1,
+      avgScore + 1.5,
+      avgScore + 2,
+      avgScore + 2.5,
+      avgScore + 3
+    ]
+  });
+}
+
+// ==============================================
+// 各图表渲染函数
+// ==============================================
+function renderVital(data) {
+  saveChart(new Chart(document.getElementById("vitalTrendChart"), {
+    type: "line",
+    data: {
+      labels: data.months,
+      datasets: [
+        { label: "收缩压", data: data.sbp, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.08)", tension: 0.4 },
+        { label: "血压警戒线", data: Array(data.months.length).fill(130), borderColor: "#ef4444", borderDash: [5,5] },
+        { label: "血糖", data: data.glu, borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.08)", tension: 0.4 },
+        { label: "血糖警戒线", data: Array(data.months.length).fill(6.1), borderColor: "#10b981", borderDash: [5,5] },
+        { label: "健康分", data: data.score, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.08)", tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderOrgan(data) {
+  saveChart(new Chart(document.getElementById("organTrendChart"), {
+    type: "radar",
+    data: {
+      labels: data.labels,
+      datasets: [
+        { label: "去年", data: data.lastYear, borderColor: "#999", backgroundColor: "rgba(156,163,175,0.12)" },
+        { label: "今年", data: data.currentYear, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.15)" }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderLevel(data) {
+  saveChart(new Chart(document.getElementById("levelShiftChart"), {
+    type: "bar",
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: "人数",
+        data: data.values,
+        backgroundColor: ["#10b981","#3b82f6","#f59e0b","#ef4444","#7e22ce"]
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderChronic(data) {
+  saveChart(new Chart(document.getElementById("chronicChart"), {
+    type: "line",
+    data: {
+      labels: data.labels,
+      datasets: [
+        { label: "单一慢病", data: data.single, borderColor: "#3b82f6", tension: 0.4 },
+        { label: "双慢病", data: data.double, borderColor: "#f59e0b", tension: 0.4 },
+        { label: "多慢病", data: data.multi, borderColor: "#ef4444", tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderAbnormal(data) {
+  saveChart(new Chart(document.getElementById("abnormalChart"), {
+    type: "line",
+    data: {
+      labels: data.labels,
+      datasets: [
+        { label: "血压异常", data: data.bp, borderColor: "#ef4444", tension: 0.4 },
+        { label: "血糖异常", data: data.glu, borderColor: "#f59e0b", tension: 0.4 },
+        { label: "血脂异常", data: data.fat, borderColor: "#7e22ce", tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderWarn(data) {
+  saveChart(new Chart(document.getElementById("warnTrendChart"), {
+    type: "bar",
+    data: {
+      labels: data.months,
+      datasets: [
+        { label: "血压告警", data: data.bp, backgroundColor: "#ef4444" },
+        { label: "血糖告警", data: data.glu, backgroundColor: "#f59e0b" },
+        { label: "心率告警", data: data.hr, backgroundColor: "#3b82f6" }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderIntervention(data) {
+  saveChart(new Chart(document.getElementById("interventionChart"), {
+    type: "line",
+    data: {
+      labels: data.months,
+      datasets: [
+        { label: "干预次数", data: data.count, borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.08)", tension: 0.4 },
+        { label: "改善率", data: data.effect, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.08)", tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderSeason(data) {
+  saveChart(new Chart(document.getElementById("seasonChart"), {
+    type: "bar",
+    data: {
+      labels: ["春季","夏季","秋季","冬季"],
+      datasets: [
+        { label: "心脑血管", data: data.heart, backgroundColor: "#ef4444" },
+        { label: "代谢异常", data: data.meta, backgroundColor: "#f59e0b" },
+        { label: "综合异常", data: data.all, backgroundColor: "#3b82f6" }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderGroup(data) {
+  saveChart(new Chart(document.getElementById("ageGroupChart"), {
+    type: "bar",
+    data: {
+      labels: data.ageLabels,
+      datasets: [{ label: "平均健康评分", data: data.ageValues, backgroundColor: "#3b82f6" }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+
+  saveChart(new Chart(document.getElementById("genderChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["男性", "女性"],
+      datasets: [{ data: [data.male, data.female], backgroundColor: ["#3b82f6","#f472b6"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "65%" }
+  }));
+
+  saveChart(new Chart(document.getElementById("areaChart"), {
+    type: "bar",
+    data: {
+      labels: data.areaLabels,
+      datasets: [{ label: "辖区平均评分", data: data.areaValues, backgroundColor: "#10b981" }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+function renderAiForecast(data) {
+  saveChart(new Chart(document.getElementById("aiForecastChart"), {
+    type: "line",
+    data: {
+      labels: data.labels,
+      datasets: [
+        { label: "实际值", data: data.real, borderColor: "#3b82f6", tension: 0.4 },
+        { label: "AI预测", data: data.predict, borderColor: "#10b981", borderDash: [6,6], tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+// ==============================================
+// AI健康趋势总结
+// ==============================================
+async function openAiTrend(){
+  const ai = await fetchApi(API.aiSummary, getParams());
+
+  if (!ai || !ai.report) {
+    alert("AI健康趋势分析接口连接失败");
+    return;
+  }
+
+  document.getElementById("aiConclusion").innerHTML = ai.report;
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: "smooth"
+  });
+}
+
+// ==============================================
+// 页面交互功能
+// ==============================================
+function toggleSubmenu(el){
+  const sub = el.nextElementSibling;
+  const arrow = el.querySelector('.menu-arrow');
+
+  if (!sub) return;
+
+  sub.style.display = sub.style.display === 'block' ? 'none' : 'block';
+
+  if (arrow) {
+    arrow.classList.toggle('open');
+  }
+}
+
+function toggleDark(){
+  document.body.classList.toggle('dark');
+}
+
+function trendExcelImport() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".xlsx,.xls,.csv";
+
+  input.onchange = function () {
+    const file = input.files[0];
+    if (!file) return;
+
+    alert(
+      `已选择文件：${file.name}\n\n` +
+      `当前页面已完成导入入口，后续可接后端 Excel 解析接口。`
+    );
+  };
+
+  input.click();
+}
+
+function exportReport(){
+  window.open(API.export, "_blank");
+}
+
+function printPage(){
+  window.print();
+}
+
+function resetFilter(){
+  document.getElementById("timeType").value = "月度趋势";
+  document.getElementById("areaId").value = "all";
+  document.getElementById("ageRange").value = "全部年龄段";
+  document.getElementById("healthType").value = "全维度健康";
+  getTrendData();
+}
+
+function toggleAllChart(){
+  const boxes = document.querySelectorAll('.chart-box');
+  boxes.forEach(item => {
+    item.style.display = item.style.display === 'none' ? 'block' : 'none';
+  });
+}
+
+function fullChart(btn){
+  alert('全屏功能已预留，可继续扩展为弹窗大图展示');
+}
+
+function downChart(id){
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+
+  const link = document.createElement("a");
+  link.download = `${id}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+// ==============================================
+// 初始化
+// ==============================================
+function updateTime(){
+  const el = document.getElementById('currentTime');
+  if (el) {
+    el.innerText = new Date().toLocaleString('zh-CN');
+  }
+}
+
+window.onload = function(){
+  updateTime();
+  setInterval(updateTime, 1000);
+
+  ["timeType", "areaId", "ageRange", "healthType"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", getTrendData);
+    }
+  });
+
+  getTrendData();
+};
+</script>
+
+</script>
+</body>
+</html>

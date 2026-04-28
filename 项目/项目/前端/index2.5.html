@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>老人资金台账 - 智护颐年智慧养老平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        /* 样式全部原封不动保留 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; color: #333; }
+        
+        .sidebar { width: 190px; background-color: #fff; border-right: 1px solid #e5e7eb; height: 100vh; position: fixed; left: 0; top: 0; padding: 16px 0; overflow-y: auto; z-index: 100; }
+        .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background-color: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+        .logo-text h1 { font-size: 18px; font-weight: 600; color: #1f2937; }
+        .logo-text p { font-size: 12px; color: #6b7280; }
+        
+        .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #4b5563; text-decoration: none; font-size: 14px; transition: all 0.2s; cursor: pointer; }
+        .menu-item:hover { background-color: #eff6ff; color: #3b82f6; }
+        .menu-item.active { background-color: #eff6ff; color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .menu-item .badge { margin-left: auto; background-color: #ef4444; color: white; font-size: 12px; padding: 2px 6px; border-radius: 10px; }
+        
+        .submenu { display: none; overflow: hidden; }
+        .submenu-item { display: flex; align-items: center; padding: 10px 20px 10px 36px; color: #6b7280; text-decoration: none; font-size: 13px; transition: all 0.2s; }
+        .submenu-item:hover { background-color: #f9fafb; color: #3b82f6; }
+        .submenu-item.active { color: #3b82f6; font-weight: bold; background-color: #f9fafb; }
+        .menu-arrow { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+        .menu-arrow.open { transform: rotate(90deg); }
+        
+        .ai-assistant { position: sticky; bottom: 16px; margin: 12px; background: linear-gradient(135deg, #eff6ff, #e0f2fe); border-radius: 14px; padding: 16px; border: 1px solid #bfdbfe; }
+        .ai-assistant h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; color: #1e40af; }
+        .ai-assistant p { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+        .ai-assistant button { width: 100%; background-color: #2563eb; color: white; border: none; border-radius: 8px; padding: 9px; font-size: 12.5px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        
+        .main-content { margin-left: 190px; }
+        .top-nav { background-color: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .nav-menu { display: flex; gap: 32px; }
+        .nav-menu a { text-decoration: none; color: #4b5563; font-size: 14px; font-weight: 500; padding: 6px 0; }
+        .nav-menu a.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
+        .nav-right { display: flex; align-items: center; gap: 24px; }
+        .nav-notification { position: relative; font-size: 18px; color: #6b7280; }
+        .nav-notification .badge { position: absolute; top: -6px; right: -6px; background-color: #ef4444; color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
+        .nav-time { font-size: 14px; color: #4b5563; }
+        .nav-user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .nav-user img { width: 32px; height: 32px; border-radius: 50%; background-color: #e5e7eb; }
+        
+        .card { background: #fff; border-radius: 12px; margin: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f9fafb; padding: 14px 16px; text-align: left; font-weight: 600; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
+        td { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; }
+        .money { font-family: 'Courier New', Courier, monospace; font-weight: bold; color: #2563eb; }
+
+        /* 新增弹窗专属样式 */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-box { background: #fff; width: 500px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .bill-item-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #e5e7eb; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo"><div class="logo-icon"><i class="fa fa-cloud"></i></div><div class="logo-text"><h1>智护颐年</h1><p>智慧养老服务资源调度平台</p></div></div>
+        <div class="menu">
+            <a href="index9.html" class="menu-item"><i class="fa fa-home"></i><span>首页总览</span></a>
+            <div class="menu-item active" onclick="toggleSubmenu(this)"><i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow open"></i></div>
+            <div class="submenu" style="display:block;">
+                <a href="index2.1.html" class="submenu-item">老人档案管理</a>
+                <a href="index2.2.html" class="submenu-item">失能等级评估</a>
+                <a href="index2.3.html" class="submenu-item">特殊老人管理</a>
+                <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
+                <a href="index2.5.html" class="submenu-item active">老人资金台账</a>
+            </div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">实时健康数据</a><a href="#" class="submenu-item">慢病专项管理</a><a href="#" class="submenu-item">用药管理中心</a><a href="#" class="submenu-item">体检档案记录</a><a href="#" class="submenu-item">健康趋势分析</a></div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">实时告警中心</a><a href="#" class="submenu-item">跌倒/离床预警</a><a href="#" class="submenu-item">电子围栏管控</a><a href="#" class="submenu-item">居家安防预警</a><a href="#" class="submenu-item">预警处置闭环</a></div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">工单智能派单</a><a href="#" class="submenu-item">上门服务管理</a><a href="#" class="submenu-item">照护计划定制</a><a href="#" class="submenu-item">服务评价管理</a><a href="#" class="submenu-item">服务时长监管</a></div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">护理人员档案</a><a href="#" class="submenu-item">排班考勤管理</a><a href="#" class="submenu-item">资质证书管理</a><a href="#" class="submenu-item">绩效考核管理</a><a href="#" class="submenu-item">培训学习管理</a></div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">设备统一接入</a><a href="#" class="submenu-item">穿戴设备监控</a><a href="#" class="submenu-item">居家智能硬件</a><a href="#" class="submenu-item">设备故障报修</a><a href="#" class="submenu-item">设备数据统计</a></div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">AI健康研判</a><a href="#" class="submenu-item">AI智能派单</a><a href="#" class="submenu-item">反诈智能防护</a><a href="#" class="submenu-item">情绪AI识别</a><a href="#" class="submenu-item">智能营养配餐</a></div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">高龄补贴审核</a><a href="#" class="submenu-item">护理补贴发放</a><a href="#" class="submenu-item">服务费用管理</a><a href="#" class="submenu-item">财务对账报表</a></div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heart"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">上门探访记录</a><a href="#" class="submenu-item">心理慰藉服务</a><a href="#" class="submenu-item">社区活动管理</a><a href="#" class="submenu-item">节日慰问关怀</a></div>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">全域养老看板</a><a href="#" class="submenu-item">人口结构分析</a><a href="#" class="submenu-item">风险分布统计</a><a href="#" class="submenu-item">民政上报报表</a></div>
+            <a href="#" class="menu-item"><i class="fa fa-envelope"></i><span>消息通知中心</span><span class="badge">8</span></a>
+            <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+            <div class="submenu"><a href="#" class="submenu-item">区域组织管理</a><a href="#" class="submenu-item">账号角色管理</a><a href="#" class="submenu-item">菜单权限配置</a><a href="#" class="submenu-item">系统字典配置</a><a href="#" class="submenu-item">操作日志查询</a><a href="#" class="submenu-item">数据备份恢复</a></div>
+        </div>
+        <div class="ai-assistant"><h3>AI助手小智</h3><p>为您提供智能决策建议</p><button>立即咨询</button><i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i></div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-nav">
+            <div class="nav-left">
+                <button style="background:none; border:none; font-size:18px; color:#6b7280; margin-right:16px;"><i class="fa fa-bars"></i></button>
+                <div class="nav-menu"><a href="index9.html">首页</a><a href="#" class="active">老人资金台账</a></div>
+            </div>
+            <div class="nav-right">
+                <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">12</span></div>
+                <div class="nav-time" id="currentTime">加载时间...</div>
+                <div class="nav-user"><img src="" alt=" "><span>管理员 <i class="fa fa-angle-down"></i></span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                <h2 class="font-bold text-gray-800" style="font-size: 16px;">老人账户资金与补贴明细台账</h2>
+                <button onclick="loadLedger()" style="background-color: #3b82f6; color: white; border: none; padding: 6px 16px; border-radius: 6px; font-size: 13px; cursor: pointer;"><i class="fa fa-refresh"></i> 刷新台账数据</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>序号</th><th>老人姓名</th><th>身份证号</th><th>账户余额 (元)</th><th>月度补贴</th><th>累计消费</th><th>结算状态</th><th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="ledgerBody">
+                    <tr><td colspan="8" style="text-align: center; color: #9ca3af; padding: 20px;">正在加载数据...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="billModal">
+        <div class="modal-box">
+            <div style="padding: 16px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f9fafb;">
+                <h3 style="font-weight: bold; color: #1f2937; font-size: 15px;" id="billTitle">账单明细</h3>
+                <button onclick="closeBill()" style="background: none; border: none; font-size: 20px; color: #9ca3af; cursor: pointer; line-height: 1;">&times;</button>
+            </div>
+            <div style="padding: 24px;">
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 12px; display: flex; justify-content: space-between;">
+                    <span>账单周期：2024年05月</span>
+                    <span>状态：<span style="color: #10b981; font-weight: bold;">已结算</span></span>
+                </div>
+                <div id="billItemsContainer" style="border-top: 2px solid #e5e7eb; border-bottom: 2px solid #e5e7eb; margin-bottom: 16px;">
+                    </div>
+                <div style="text-align: right; font-weight: bold; font-size: 16px; color: #1f2937;">
+                    当月消费合计：<span style="color: #ef4444; font-size: 20px;" id="billTotal">￥0.00</span>
+                </div>
+            </div>
+            <div style="padding: 16px 24px; background: #f9fafb; text-align: right; border-top: 1px solid #e5e7eb;">
+                <button onclick="closeBill()" style="background: #fff; color: #4b5563; border: 1px solid #d1d5db; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;">关闭</button>
+                <button onclick="alert('正在连接打印机...')" style="background: #3b82f6; color: #fff; border: none; padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-left: 8px;"><i class="fa fa-print"></i> 打印小票</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSubmenu(el) {
+            const submenu = el.nextElementSibling;
+            const arrow = el.querySelector('.menu-arrow');
+            if (submenu.style.display === 'block') { submenu.style.display = 'none'; arrow.classList.remove('open'); }
+            else { submenu.style.display = 'block'; arrow.classList.add('open'); }
+        }
+
+        setInterval(() => document.getElementById('currentTime').innerText = new Date().toLocaleString('zh-CN'), 1000);
+
+        function loadLedger() {
+            fetch('http://127.0.0.1:8000/api/elders')
+                .then(res => res.json())
+                .then(result => {
+                    if (result.code === 200) {
+                        const body = document.getElementById('ledgerBody');
+                        body.innerHTML = '';
+                        result.data.forEach((item, index) => {
+                            // 💡 重点：这里给按钮加上了 onclick 事件，把老人的姓名和消费金额传进去
+                            body.innerHTML += `
+                                <tr style="transition: background 0.2s;" onmouseover="this.style.backgroundColor='#f9fafb'" onmouseout="this.style.backgroundColor='transparent'">
+                                    <td style="color: #9ca3af;">${index + 1}</td>
+                                    <td style="font-weight: 600; color: #1f2937;">${item.name}</td>
+                                    <td style="font-family: monospace; font-size: 12px; color: #6b7280;">${item.idCard}</td>
+                                    <td class="money">￥${item.balance.toFixed(2)}</td>
+                                    <td style="color: #10b981; font-weight: 500;">￥${item.subsidy}</td>
+                                    <td style="color: #4b5563;">￥${item.consumption.toFixed(2)}</td>
+                                    <td><span style="font-size: 11px; padding: 2px 8px; background-color: #d1fae5; color: #047857; border-radius: 10px;">结算正常</span></td>
+                                    <td>
+                                        <button onclick="viewBill('${item.name}', ${item.consumption})" style="color: #3b82f6; background: none; border: none; cursor: pointer; text-decoration: underline; font-size: 13px;">查看账单</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                });
+        }
+
+        // 💡 弹窗打开逻辑：生成非常逼真的动态消费数据
+        function viewBill(name, totalConsumption) {
+            document.getElementById('billTitle').innerText = `【${name}】的月度服务账单`;
+            
+            // 模拟拆分消费金额，显得更真实
+            let item1 = (totalConsumption * 0.4).toFixed(2);
+            let item2 = (totalConsumption * 0.3).toFixed(2);
+            let item3 = (totalConsumption * 0.3).toFixed(2);
+
+            document.getElementById('billItemsContainer').innerHTML = `
+                <div class="bill-item-row">
+                    <div>
+                        <div style="font-size: 13px; font-weight: 500; color: #1f2937;">上门康复训练 (2小时)</div>
+                        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">服务人员：李护士 | 2024-05-18</div>
+                    </div>
+                    <div style="font-size: 14px; font-weight: bold; color: #374151;">￥${item1}</div>
+                </div>
+                <div class="bill-item-row">
+                    <div>
+                        <div style="font-size: 13px; font-weight: 500; color: #1f2937;">社区食堂助餐打包服务</div>
+                        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">服务人员：张大厨 | 2024-05-19</div>
+                    </div>
+                    <div style="font-size: 14px; font-weight: bold; color: #374151;">￥${item2}</div>
+                </div>
+                <div class="bill-item-row" style="border-bottom: none;">
+                    <div>
+                        <div style="font-size: 13px; font-weight: 500; color: #1f2937;">基础生活照料及助浴</div>
+                        <div style="font-size: 11px; color: #9ca3af; margin-top: 4px;">服务人员：王护工 | 2024-05-20</div>
+                    </div>
+                    <div style="font-size: 14px; font-weight: bold; color: #374151;">￥${item3}</div>
+                </div>
+            `;
+            
+            document.getElementById('billTotal').innerText = `￥${totalConsumption.toFixed(2)}`;
+            document.getElementById('billModal').style.display = 'flex'; // 显示弹窗
+        }
+
+        // 关闭弹窗逻辑
+        function closeBill() {
+            document.getElementById('billModal').style.display = 'none';
+        }
+
+        window.onload = loadLedger;
+    </script>
+</body>
+</html>

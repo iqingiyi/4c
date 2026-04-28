@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智护颐年 - 安全风险预警 - 跌倒/离床预警</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa; color: #333; transition: background 0.3s, color 0.3s;
+        }
+        body.night-mode { background: #191a23; color: #e5e7eb; }
+        body.night-mode .card-wrap, body.night-mode .sidebar, body.night-mode .top-nav { background: #252836; border-color: #333842; }
+        body.night-mode .addr-card { background: #2c303d; border-left-color: #60a5fa; }
+        body.night-mode .el-table th { background: #2c303d !important; color: #e5e7eb !important; border-bottom-color: #333842; }
+        body.night-mode .el-table tr { background: #252836 !important; }
+        body.night-mode .el-table td { border-bottom-color: #333842; }
+        
+        .warn-scroll-bar{ height: 36px; line-height:36px; overflow:hidden; white-space:nowrap; background:#fef2f2; color:#dc2626; border-bottom:1px solid #fecdd3; }
+        body.night-mode .warn-scroll-bar { background: #452a2a; color: #fca5a5; border-color: #7f2d2d; }
+        .warn-scroll-text{ display:inline-block; animation:scrollMove 25s linear infinite; }
+        @keyframes scrollMove{ 0%{transform:translateX(100%);} 100%{transform:translateX(-100%);} }
+        
+        .sidebar { width: 190px; background-color: #fff; border-right: 1px solid #e5e7eb; height: 100vh; position: fixed; left: 0; top: 0; padding: 16px 0; overflow-y: auto; z-index: 100; transition: all 0.3s; }
+        body.screen-mode .sidebar{display:none;}
+        body.screen-mode .top-nav{padding:8px 24px; border-bottom-color: #333842;}
+        body.screen-mode .content-container{padding:16px 24px;}
+        body.screen-mode h2{font-size:26px;}
+        body.screen-mode .num-card{font-size:120%;}
+        
+        .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background-color: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+        .logo-text h1 { font-size: 18px; font-weight: 600; color: #1f2937; }
+        body.night-mode .logo-text h1 {color: #f3f4f6;}
+        .logo-text p { font-size: 12px; color: #6b7280; }
+        .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #4b5563; text-decoration: none; font-size: 14px; transition: all 0.2s; cursor: pointer; }
+        body.night-mode .menu-item {color: #d1d5db;}
+        .menu-item:hover { background-color: #eff6ff; color: #3b82f6; }
+        body.night-mode .menu-item:hover {background: #2d3748;}
+        .menu-item.active { background-color: #eff6ff; color: #3b82f6; border-right: 3px solid #3b82f6; }
+        body.night-mode .menu-item.active {background: #2d3748;}
+        .menu-item .badge { margin-left: auto; background-color: #ef4444; color: white; font-size: 12px; padding: 2px 6px; border-radius: 10px; }
+        
+        .submenu { display: none; overflow: hidden; }
+        .submenu-item { display: flex; align-items: center; padding: 10px 20px 10px 36px; color: #6b7280; text-decoration: none; font-size: 13px; transition: all 0.2s; }
+        body.night-mode .submenu-item {color: #9ca3af;}
+        .submenu-item:hover { background-color: #f9fafb; color: #3b82f6; }
+        .submenu-item.active { color: #3b82f6; font-weight: 500; }
+        .menu-arrow { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+        .menu-arrow.open { transform: rotate(90deg); }
+        
+        .ai-assistant { position: sticky; bottom: 16px; margin: 12px; background: linear-gradient(135deg, #eff6ff, #e0f2fe); border-radius: 14px; padding: 16px; border: 1px solid #bfdbfe; }
+        body.night-mode .ai-assistant { background: #2d3748; border-color: #4a5568; }
+        .ai-assistant h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; color: #1e40af; }
+        body.night-mode .ai-assistant h3 {color: #93c5fd;}
+        .ai-assistant p { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+        .ai-assistant button { width: 100%; background-color: #2563eb; color: white; border: none; border-radius: 8px; padding: 9px; font-size: 12.5px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        
+        .main-content { margin-left: 190px; padding: 0; transition: all 0.3s; }
+        body.screen-mode .main-content{margin-left:0;}
+        .top-nav { background-color: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .nav-menu { display: flex; gap: 24px; }
+        .nav-menu a { text-decoration: none; color: #4b5563; font-size: 14px; font-weight: 500; padding: 6px 0; }
+        body.night-mode .nav-menu a {color: #d1d5db;}
+        .nav-menu a.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
+        .nav-right { display: flex; align-items: center; gap: 12px; }
+        .nav-notification { position: relative; font-size: 18px; color: #6b7280; }
+        .nav-notification .badge { position: absolute; top: -6px; right: -6px; background-color: #ef4444; color: white; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
+        .nav-time, .nav-weather { font-size: 14px; color: #4b5563; }
+        body.night-mode .nav-time, body.night-mode .nav-weather {color: #d1d5db;}
+        .nav-user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .nav-user img { width: 32px; height: 32px; border-radius: 50%; background-color: #e5e7eb; }
+        
+        .content-container { padding: 28px 32px; }
+        .card-wrap { background: #ffffff; border-radius: 16px; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04); border: 1px solid #f0f4f9; transition: all 0.3s ease; }
+        .addr-card { background: linear-gradient(120deg, #f8fafc, #f0f7ff); border-radius: 12px; padding: 10px 14px; border-left: 4px solid #409eff; }
+        .addr-title { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+        .addr-text { font-size: 14px; color: #1e293b; font-weight: 500; }
+        body.night-mode .addr-text { color: #fff; }
+        
+        .device-tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 12px; margin: 2px 3px; }
+        .dev-online {background: #ecfdf3;color: #00b42a;}
+        .dev-offline {background: #f5f7fa;color: #86909c;}
+        .dev-error {background: #fef2f2;color: #f53f3f;}
+        
+        .breath-danger{background:#fff1f0;animation:breathDanger 2s infinite ease-in-out;}
+        .breath-warning{background:#fffbeb;animation:breathWarning 2s infinite ease-in-out;}
+        body.night-mode .breath-danger{background:#452a2a;}
+        body.night-mode .breath-warning{background:#443b2a;}
+        @keyframes breathDanger{0%{background:#fff1f0;}50%{background:#ffe8e8;}100%{background:#fff1f0;}}
+        @keyframes breathWarning{0%{background:#fffbeb;}50%{background:#fff3cd;}100%{background:#fffbeb;}}
+        
+        .num-card { border-radius: 16px; padding: 20px; color: #fff; }
+        .high-risk-tag{ display:inline-block;background:#fef2f2;color:#f53f3f; font-size:12px;padding:2px 6px;border-radius:4px;margin-left:6px; }
+        .el-table { min-width: 1180px; }
+        .custom-btn { padding: 6px 12px; border: 1px solid #dcdcdc; background: #fff; border-radius: 4px; cursor: pointer; margin-right: 8px; transition: 0.2s; }
+        .custom-btn:hover { border-color: #409eff; color: #409eff; }
+        .primary-btn { background: #409eff; color: #fff; border-color: #409eff; }
+        .primary-btn:hover { background: #66b1ff; border-color: #66b1ff; color: #fff;}
+        body.night-mode .custom-btn { background: #374151; color: #e5e7eb; border-color: #4b5563; }
+        body.night-mode .custom-btn:hover { background: #4b5563; color: #60a5fa; }
+        body.night-mode .primary-btn { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+        .pagination-container { display: flex; justify-content: flex-end; align-items: center; padding: 15px 0; gap: 10px; }
+        body.night-mode #pageText { color: #d1d5db !important; }
+        body.night-mode h2, body.night-mode h3 { color: #e5e7eb !important; }
+    </style>
+</head>
+<body>
+
+<div class="warn-scroll-bar" id="warnBar" style="display:none;">
+    <div class="warn-scroll-text" id="warnText"></div>
+</div>
+
+<div class="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-cloud"></i></div>
+        <div class="logo-text">
+            <h1>智护颐年</h1>
+            <p>智慧养老服务资源调度平台</p>
+        </div>
+    </div>
+    <div class="menu">
+        <a href="#" class="menu-item"><i class="fa fa-home"></i><span>首页总览</span></a>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">老人档案管理</a>
+            <a href="#" class="submenu-item">失能等级评估</a>
+            <a href="#" class="submenu-item">特殊老人管理</a>
+            <a href="#" class="submenu-item">家属绑定管理</a>
+            <a href="#" class="submenu-item">老人台账统计</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时健康数据</a>
+            <a href="#" class="submenu-item">实时预警中心</a>
+            <a href="#" class="submenu-item">慢病专项管理</a>
+            <a href="#" class="submenu-item">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item">健康趋势分析</a>
+        </div>
+        <div class="menu-item active" onclick="toggleSubmenu(this)"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow open"></i></div>
+        <div class="submenu" style="display:block;">
+            <a href="index4.1.html" class="submenu-item">事实告警中心</a>
+            <a href="#" class="submenu-item active">跌倒/离床预警</a>
+            <a href="#" class="submenu-item">电子围栏管控</a>
+            <a href="#" class="submenu-item">居家安防预警</a>
+            <a href="#" class="submenu-item">预警处置闭环</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">工单智能派单</a>
+            <a href="#" class="submenu-item">上门服务管理</a>
+            <a href="#" class="submenu-item">照护计划定制</a>
+            <a href="#" class="submenu-item">服务评价管理</a>
+            <a href="#" class="submenu-item">服务时长监管</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">护理人员档案</a>
+            <a href="#" class="submenu-item">排班考勤管理</a>
+            <a href="#" class="submenu-item">资质证书管理</a>
+            <a href="#" class="submenu-item">绩效考核管理</a>
+            <a href="#" class="submenu-item">培训学习管理</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">设备统一接入</a>
+            <a href="#" class="submenu-item">穿戴设备监控</a>
+            <a href="#" class="submenu-item">居家智能硬件</a>
+            <a href="#" class="submenu-item">设备故障报修</a>
+            <a href="#" class="submenu-item">设备数据统计</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">AI健康研判</a>
+            <a href="#" class="submenu-item">AI智能派单</a>
+            <a href="#" class="submenu-item">反诈智能防护</a>
+            <a href="#" class="submenu-item">情绪AI识别</a>
+            <a href="#" class="submenu-item">智能营养配餐</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">高龄补贴审核</a>
+            <a href="#" class="submenu-item">护理补贴发放</a>
+            <a href="#" class="submenu-item">服务费用管理</a>
+            <a href="#" class="submenu-item">财务对账报表</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heart"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">上门探访记录</a>
+            <a href="#" class="submenu-item">心理慰藉服务</a>
+            <a href="#" class="submenu-item">社区活动管理</a>
+            <a href="#" class="submenu-item">节日慰问关怀</a>
+        </div>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">全域养老看板</a>
+            <a href="#" class="submenu-item">人口结构分析</a>
+            <a href="#" class="submenu-item">风险分布统计</a>
+            <a href="#" class="submenu-item">民政上报报表</a>
+        </div>
+        <a href="#" class="menu-item"><i class="fa fa-envelope"></i><span>消息通知中心</span><span class="badge">8</span></a>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">区域组织管理</a>
+            <a href="#" class="submenu-item">账号角色管理</a>
+            <a href="#" class="submenu-item">菜单权限配置</a>
+            <a href="#" class="submenu-item">系统字典配置</a>
+            <a href="#" class="submenu-item">操作日志查询</a>
+            <a href="#" class="submenu-item">数据备份恢复</a>
+        </div>
+    </div>
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3>
+        <p>为您提供智能决策建议</p>
+        <button>立即咨询</button>
+        <i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i>
+    </div>
+</div>
+<div class="main-content">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button style="background:none; border:none; font-size:18px; color:#6b7280; margin-right:16px;"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="#">首页</a>
+                <a href="#" class="active">风险预警</a>
+                <a href="#">跌倒离床</a>
+                <a href="#">围栏监控</a>
+                <a href="#">居家安防</a>
+                <a href="#">处置闭环</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <button class="custom-btn" onclick="openNightGuard()">夜间监护清单</button>
+            <button class="custom-btn primary-btn" id="dutyBtn" onclick="toggleDutyScreen()"><i class="fa fa-tv"></i> 值守大屏</button>
+            <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">12</span></div>
+            <div class="nav-time" id="currentTime"></div>
+            <div class="nav-weather"><i class="fa fa-sun-o"></i><span>26℃ 多云</span></div>
+            <div class="nav-user"><img src="" alt="用户头像"><span>管理员 <i class="fa fa-angle-down"></i></span></div>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <div id="app">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-[22px] font-bold text-gray-800 flex items-center">
+                    <i class="fa fa-bed text-sky-500 mr-2"></i>跌倒 / 离床智能预警中心
+                </h2>
+                <div class="flex gap-3 items-center">
+                    <button class="el-button el-button--default" @click="openHistory"><i class="fa fa-clock-o"></i> 历史记录</button>
+                    <button class="el-button el-button--default" @click="exportData"><i class="fa fa-download"></i> 数据导出</button>
+                    <button class="el-button el-button--primary" @click="openSetting"><i class="fa fa-cog"></i> 预警设置</button>
+                    <button class="el-button el-button--success" @click="manualRefresh"><i class="fa fa-refresh"></i> 同步设备</button>
+                    <label class="el-switch">
+                        <input type="checkbox" checked @change="toggleAutoSync($event.target.checked)">
+                        <span class="el-switch__core"></span>
+                    </label>
+                    <span style="margin-left:8px;font-size: 14px;">自动轮询</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-6 gap-4 mb-6">
+                <div class="num-card" style="background:linear-gradient(135deg,#36cbcb,#27b9b9)">
+                    <div class="text-white/80 text-sm"><i class="fa fa-bed mr-1"></i>正常在床</div>
+                    <div class="text-3xl font-bold mt-2">{{ stat.inBed }}</div>
+                    <div class="text-xs mt-1 text-white/70">较昨日 <span class="text-green-200">↓3</span></div>
+                </div>
+                <div class="num-card" style="background:linear-gradient(135deg,#409eff,#2979ff)">
+                    <div class="text-white/80 text-sm"><i class="fa fa-walking mr-1"></i>主动离床</div>
+                    <div class="text-3xl font-bold mt-2">{{ stat.leaveBed }}</div>
+                    <div class="text-xs mt-1 text-white/70">较昨日 <span class="text-red-200">↑5</span></div>
+                </div>
+                <div class="num-card" style="background:linear-gradient(135deg,#ffbc42,#ff9500)">
+                    <div class="text-white/80 text-sm"><i class="fa fa-hourglass-half mr-1"></i>离床超时</div>
+                    <div class="text-3xl font-bold mt-2">{{ stat.overTime }}</div>
+                    <div class="text-xs mt-1 text-white/70">较昨日 <span class="text-red-200">↑2</span></div>
+                </div>
+                <div class="num-card" style="background:linear-gradient(135deg,#ff6b6b,#f53f3f)">
+                    <div class="text-white/80 text-sm"><i class="fa fa-exclamation-circle mr-1"></i>跌倒风险</div>
+                    <div class="text-3xl font-bold mt-2">{{ stat.fall }}</div>
+                    <div class="text-xs mt-1 text-white/70">高危重点关注</div>
+                </div>
+                <div class="num-card" style="background:linear-gradient(135deg,#86909c,#64748b)">
+                    <div class="text-white/80 text-sm"><i class="fa fa-microchip mr-1"></i>设备异常</div>
+                    <div class="text-3xl font-bold mt-2">{{ stat.deviceErr }}</div>
+                    <div class="text-xs mt-1 text-white/70">需运维检修</div>
+                </div>
+                <div class="num-card" style="background:linear-gradient(135deg,#f43f5e,#e11d48)">
+                    <div class="text-white/80 text-sm"><i class="fa fa-bell mr-1"></i>未处理告警</div>
+                    <div class="text-3xl font-bold mt-2">{{ stat.unHandleWarn }}</div>
+                    <div class="text-xs mt-1 text-white/70">待闭环处置</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-5 mb-6">
+                <div class="card-wrap p-5 h-80 flex flex-col">
+                    <h3 class="text-base font-medium text-gray-700 mb-3 flex-shrink-0">📈 24小时离床行为趋势</h3>
+                    <div style="position: relative; flex: 1; min-height: 0;">
+                        <canvas id="bedLineChart"></canvas>
+                    </div>
+                </div>
+                <div class="card-wrap p-5 h-80 flex flex-col">
+                    <h3 class="text-base font-medium text-gray-700 mb-3 flex-shrink-0">📊 风险预警类型分布</h3>
+                    <div style="position: relative; flex: 1; min-height: 0;">
+                        <canvas id="warnPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-wrap p-5 mb-6 flex flex-wrap gap-3 items-center">
+                <input class="el-input__inner" placeholder="老人姓名 / 床位" v-model="query.name" style="width:160px;height:32px;padding:0 10px;">
+                <select class="el-input__inner" v-model="query.area" style="width:150px;height:32px;">
+                    <option value="">场所类型</option>
+                    <option value="康养社区">康养社区</option>
+                    <option value="日间照料中心">日间照料中心</option>
+                    <option value="居家养老住宅">居家养老住宅</option>
+                    <option value="康养公寓">康养公寓</option>
+                    <option value="康复中心">康复中心</option>
+                </select>
+                <select class="el-input__inner" v-model="query.status" style="width:150px;height:32px;">
+                    <option value="">监测状态</option>
+                    <option value="在床">正常在床</option>
+                    <option value="离床">临时离床</option>
+                    <option value="超时">离床超时</option>
+                    <option value="跌倒">跌倒预警</option>
+                </select>
+                <select class="el-input__inner" v-model="query.device" style="width:150px;height:32px;">
+                    <option value="">设备状态</option>
+                    <option value="在线">设备在线</option>
+                    <option value="离线">设备离线</option>
+                    <option value="故障">设备故障</option>
+                </select>
+                <button class="el-button el-button--primary" @click="searchData"><i class="fa fa-search"></i> 筛选查询</button>
+                <button class="el-button el-button--warning" @click="doAction('clear', '批量消警成功')"><i class="fa fa-check"></i> 批量消警</button>
+                <button class="el-button el-button--danger" @click="doAction('restart', '已向底层网关下发批量重启指令')"><i class="fa fa-refresh-right"></i> 批量重启设备</button>
+            </div>
+
+            <div class="card-wrap p-5">
+                <table border="1" class="el-table el-table--border el-table--stripe" style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding:10px;text-align:center;width:55px;"><input type="checkbox"></th>
+                            <th style="padding:10px;text-align:center;width:120px;">告警编号</th>
+                            <th style="padding:10px;text-align:center;width:110px;">床位编码</th>
+                            <th style="padding:10px;text-align:center;width:160px;">老人信息</th>
+                            <th style="padding:10px;text-align:center;min-width:240px;">部署地址</th>
+                            <th style="padding:10px;text-align:center;width:200px;">智能设备状态</th>
+                            <th style="padding:10px;text-align:center;width:110px;">监测状态</th>
+                            <th style="padding:10px;text-align:center;width:100px;">处置状态</th>
+                            <th style="padding:10px;text-align:center;width:90px;">离床时长</th>
+                            <th style="padding:10px;text-align:center;width:170px;">最后同步</th>
+                            <th style="padding:10px;text-align:center;width:220px;">快捷操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pageData" :key="row.warnNo" :class="{'breath-danger': row.bedState==='跌倒预警', 'breath-warning': row.bedState==='离床超时'}" style="text-align:center;">
+                            <td style="padding:8px;"><input type="checkbox"></td>
+                            <td style="padding:8px;color:#666;font-size:13px;">{{ row.warnNo }}</td>
+                            <td style="padding:8px;font-weight:bold;color:#409eff;">{{ row.bedCode }}</td>
+                            <td style="padding:8px;">
+                                <div style="font-weight:bold;font-size:14px;">{{ row.elderName }}</div>
+                                <div style="font-size:12px;color:#666;margin-top:2px;">{{ row.age }}岁｜{{ row.disableLevel }}</div>
+                                <span v-if="row.isHighRisk" style="background:#fef2f2;color:#f53f3f;border:1px solid #fecdd3;font-size:12px;padding:1px 5px;border-radius:3px;display:inline-block;margin-top:4px;">高危</span>
+                            </td>
+                            <td style="padding:8px;">
+                                <div class="addr-card" style="text-align:left;">
+                                    <div class="addr-title">{{ row.areaType }}</div>
+                                    <div class="addr-text">{{ row.address }}</div>
+                                </div>
+                            </td>
+                            <td style="padding:8px;text-align:left;padding-left:15px;">
+                                <span :class="row.mattressStatus=='正常'?'device-tag dev-online':'device-tag dev-error'">床垫: {{ row.mattressStatus }}</span><br>
+                                <span :class="row.radarStatus=='正常'?'device-tag dev-online':'device-tag dev-error'">雷达: {{ row.radarStatus }}</span>
+                            </td>
+                            <td style="padding:8px;font-weight:bold;" :style="{color: row.bedState.includes('跌倒')?'#f53f3f':row.bedState.includes('离床')?'#ff7d00':'#00b42a'}">{{ row.bedState }}</td>
+                            <td style="padding:8px;" :style="{color: row.warnHandle=='未处理'?'#f53f3f':'#666'}">{{ row.warnHandle }}</td>
+                            <td style="padding:8px;">{{ row.leaveTime }}</td>
+                            <td style="padding:8px;color:#999;font-size:12px;">{{ row.syncTime }}</td>
+                            <td style="padding:8px;">
+                                <button @click="doAction('rescue', `救援工单已派发给 ${row.elderName} 附近护理员`)" class="custom-btn primary-btn" style="margin-bottom:4px;font-size:12px;padding:4px 8px;">救援</button>
+                                <button @click="doAction('deal', '告警处置成功')" class="custom-btn" style="margin-bottom:4px;font-size:12px;padding:4px 8px;">核实</button>
+                                <button @click="doAction('sync', row.bedCode + ' 同步完成')" class="custom-btn" style="font-size:12px;padding:4px 8px;margin-right:0;">同步</button>
+                            </td>
+                        </tr>
+                        <tr v-if="pageData.length === 0">
+                            <td colspan="11" style="padding:30px;color:#999;text-align:center;">暂无数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="pagination-container">
+                    <span style="font-size:13px; color:#666;" id="pageText">共 {{ allBedData.length }} 条数据，当前 {{ currentPage }} / {{ Math.ceil(allBedData.length / pageSize) || 1 }} 页</span>
+                    <button class="custom-btn" @click="prevPage">上一页</button>
+                    <button class="custom-btn" @click="nextPage">下一页</button>
+                </div>
+            </div>
+
+            <el-dialog v-model="settingVisible" title="⚙️ 智能预警阈值设置" width="500px">
+                <el-form label-width="130px">
+                    <el-form-item label="离床超时告警(分)">
+                        <el-input-number v-model="settingForm.leaveBedTimeout" :min="1" :max="60"></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="雷达跌倒灵敏度">
+                        <el-select v-model="settingForm.fallSensitivity" style="width:100%;">
+                            <el-option label="高灵敏度 (防漏报推荐)" value="高"></el-option>
+                            <el-option label="中灵敏度" value="中"></el-option>
+                            <el-option label="低灵敏度 (防误报)" value="低"></el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="异常心率上限">
+                        <el-input-number v-model="settingForm.heartRateMax" :min="100" :max="180"></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="异常心率下限">
+                        <el-input-number v-model="settingForm.heartRateMin" :min="30" :max="60"></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="触发后自动通知">
+                        <el-switch v-model="settingForm.autoNotify" active-text="同步通知家属及负责人"></el-switch>
+                    </el-form-item>
+                </el-form>
+                <template #footer>
+                    <el-button @click="settingVisible=false">取消</el-button>
+                    <el-button type="primary" @click="saveSetting">保存并下发至网关</el-button>
+                </template>
+            </el-dialog>
+
+            <el-dialog v-model="historyVisible" title="🕒 历史预警与闭环处置记录" width="600px">
+                <el-timeline style="padding-left:10px;">
+                    <el-timeline-item 
+                        v-for="(activity, index) in historyList" 
+                        :key="index" 
+                        :timestamp="activity.time" 
+                        :type="activity.type.includes('跌倒') ? 'danger' : 'warning'"
+                        size="large">
+                        <h4 style="margin:0; font-size:15px; color:#333;">{{ activity.elderName }} ({{ activity.bedCode }}) - {{ activity.type }}</h4>
+                        <p style="margin:5px 0 0 0; font-size:13px; color:#666;">处置人员：{{ activity.handler }}</p>
+                        <p style="margin:2px 0 0 0; font-size:13px; color:#666; background:#f9fafb; padding:6px; border-radius:4px;">处置结果：{{ activity.result }}</p>
+                    </el-timeline-item>
+                </el-timeline>
+            </el-dialog>
+        </div>
+    </div>
+</div>
+
+<div id="nightDialog" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;">
+    <div style="width:90%;margin:20px auto;background:#fff;border-radius:8px;overflow:hidden;">
+        <div style="padding:15px 20px;background:#f5f7fa;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:16px;">🌙 夜间重点监护人员清单</h3>
+            <button class="custom-btn" onclick="closeNight()" style="margin:0;">关闭</button>
+        </div>
+        <div style="padding:15px;max-height:600px;overflow:auto;">
+            <table border="1" width="100%" class="el-table el-table--border" style="border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f9fafb;">
+                        <th style="padding:8px;">床位</th><th style="padding:8px;">姓名</th><th style="padding:8px;">年龄/等级</th><th style="padding:8px;">风险</th><th style="padding:8px;">状态</th><th style="padding:8px;">监护原因</th><th style="padding:8px;">区域</th><th style="padding:8px;">看护人</th><th style="padding:8px;">巡查时间</th>
+                    </tr>
+                </thead>
+                <tbody id="nightBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.js"></script>
+<script>
+    // 💡 全局控制沉浸式“值守大屏”模式
+    let isScreenMode = false;
+    function toggleDutyScreen() {
+        isScreenMode = !isScreenMode;
+        const btn = document.getElementById("dutyBtn");
+        if (isScreenMode) {
+            document.body.classList.add('screen-mode', 'night-mode');
+            btn.innerHTML = '<i class="fa fa-compress"></i> 退出大屏';
+            if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(err=>{});
+        } else {
+            document.body.classList.remove('screen-mode', 'night-mode');
+            btn.innerHTML = '<i class="fa fa-tv"></i> 值守大屏';
+            if(document.exitFullscreen) document.exitFullscreen().catch(err=>{});
+        }
+        // 重新渲染图表适应宽度
+        setTimeout(() => { if(window.dispatchEvent) window.dispatchEvent(new Event('resize')); }, 300);
+    }
+
+    function openNightGuard() { document.getElementById("nightDialog").style.display = "block"; window.loadNightData(); }
+    function closeNight() { document.getElementById("nightDialog").style.display = "none"; }
+
+    function updateTime() {
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const str = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        document.getElementById('currentTime').innerText = str;
+    }
+    updateTime(); setInterval(updateTime, 1000);
+
+    function toggleSubmenu(el) {
+        const submenu = el.nextElementSibling;
+        const arrow = el.querySelector('.menu-arrow');
+        if (submenu) submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
+        if (arrow) arrow.classList.toggle('open');
+    }
+
+    const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue; 
+
+    createApp({
+        setup() {
+            const API_HOST = "http://127.0.0.1:8000/api";
+            
+            const stat = reactive({ inBed:0, leaveBed:0, overTime:0, fall:0, deviceErr:0, unHandleWarn:0 });
+            const query = reactive({ name:'', area:'', status:'', device:'' });
+            
+            const allBedData = ref([]);
+            const currentPage = ref(1);
+            const pageSize = 10;
+            
+            const pageData = computed(() => {
+                let start = (currentPage.value - 1) * pageSize;
+                return allBedData.value.slice(start, start + pageSize);
+            });
+
+            const settingVisible = ref(false);
+            const settingForm = reactive({ leaveBedTimeout: 15, fallSensitivity: '高', heartRateMax: 120, heartRateMin: 50, autoNotify: true });
+            const historyVisible = ref(false);
+            const historyList = ref([]);
+
+            let autoSyncEnabled = true;
+            let syncTimer = null;
+            let bedLineChartObj = null;
+            let warnPieChartObj = null;
+
+            const loadStat = async () => {
+                try {
+                    let r = await fetch(API_HOST + "/bed/dashboard");
+                    let res = await r.json();
+                    if(res.code !== 200) return;
+                    
+                    Object.assign(stat, res.stats);
+
+                    let warnBar = document.getElementById("warnBar");
+                    let warnText = document.getElementById("warnText");
+                    if (stat.unHandleWarn > 0) {
+                        warnBar.style.display = "block";
+                        warnText.innerText = "紧急提醒：存在 " + stat.unHandleWarn + " 条未处理高危预警，请立即核实并调度护理员处置！";
+                    } else {
+                        warnBar.style.display = "none";
+                    }
+
+                    if (bedLineChartObj && warnPieChartObj && res.charts) {
+                        bedLineChartObj.data.datasets[0].data = res.charts.line;
+                        bedLineChartObj.update();
+                        warnPieChartObj.data.datasets[0].data = res.charts.pie;
+                        warnPieChartObj.update();
+                    }
+                    
+                    window.loadNightData = () => {
+                        let list = res.nightList || [];
+                        let html = "";
+                        list.forEach(i => {
+                            html += `<tr style="text-align:center;">
+                                <td style="padding:8px;">${i.bedCode}</td>
+                                <td style="padding:8px;">${i.elderName}</td>
+                                <td style="padding:8px;">${i.age}/${i.disableLevel}</td>
+                                <td style="padding:8px;color:red;font-weight:bold;">${i.riskLevel}</td>
+                                <td style="padding:8px;">${i.bedState}</td>
+                                <td style="padding:8px;">${i.guardReason}</td>
+                                <td style="padding:8px;">${i.areaType}</td>
+                                <td style="padding:8px;">${i.guardUser}</td>
+                                <td style="padding:8px;">${i.lastCheckTime}</td>
+                            </tr>`;
+                        });
+                        document.getElementById("nightBody").innerHTML = html;
+                    };
+                } catch (e) {}
+            };
+
+            const loadBedList = async () => {
+                try {
+                    let r = await fetch(API_HOST + "/bed/list");
+                    let res = await r.json();
+                    allBedData.value = res.data;
+                } catch (e) {}
+            };
+
+            const searchData = async () => {
+                let url = `${API_HOST}/bed/list?name=${query.name}&area=${query.area}&status=${query.status}&device=${query.device}`;
+                let r = await fetch(url);
+                let res = await r.json();
+                allBedData.value = res.data;
+                currentPage.value = 1; 
+            };
+
+            const doAction = async (actionName, successMsg) => {
+                await fetch(API_HOST + `/bed/action?action=${actionName}`, { method: "POST" });
+                alert(successMsg);
+                loadStat();
+                loadBedList();
+            };
+
+            const manualRefresh = () => {
+                loadStat(); loadBedList();
+                alert("已向底层物联设备下发全量同步指令");
+            };
+
+            const toggleAutoSync = (checked) => {
+                autoSyncEnabled = checked;
+                if (syncTimer) clearInterval(syncTimer);
+                if (checked) { syncTimer = setInterval(()=>{ loadStat(); loadBedList(); }, 5000); }
+            };
+
+            const prevPage = () => { if(currentPage.value > 1) currentPage.value--; };
+            const nextPage = () => { 
+                let max = Math.ceil(allBedData.value.length / pageSize) || 1;
+                if(currentPage.value < max) currentPage.value++; 
+            };
+            const exportData = () => { window.open(API_HOST + "/bed/export", "_blank"); };
+
+            const openHistory = async () => {
+                try {
+                    let r = await fetch(API_HOST + "/bed/history");
+                    let res = await r.json();
+                    historyList.value = res.data;
+                    historyVisible.value = true;
+                } catch(e) { alert("获取历史记录失败"); }
+            };
+
+            const openSetting = async () => {
+                try {
+                    let r = await fetch(API_HOST + "/config/get");
+                    let res = await r.json();
+                    Object.assign(settingForm, res.data);
+                    settingVisible.value = true;
+                } catch(e) {}
+            };
+
+            const saveSetting = async () => {
+                try {
+                    let r = await fetch(API_HOST + "/config/save", {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(settingForm)
+                    });
+                    let res = await r.json();
+                    alert(res.msg);
+                    settingVisible.value = false;
+                } catch(e) {}
+            };
+
+            onMounted(() => {
+                Chart.defaults.color = '#9ca3af'; 
+                
+                bedLineChartObj = new Chart(document.getElementById('bedLineChart'), {
+                    type: "line",
+                    data: {
+                        labels: ['-4小时', '-3小时', '-2小时', '-1小时', '半时前', '当前'],
+                        datasets: [{
+                            label: '离床总人次',
+                            data: [0, 0, 0, 0, 0, 0],
+                            borderColor: '#409eff',
+                            fill: true,
+                            backgroundColor: 'rgba(64,158,255,0.1)',
+                            tension: 0.3
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        scales: { y: { ticks: { stepSize: 1 } } } 
+                    }
+                });
+
+                warnPieChartObj = new Chart(document.getElementById('warnPieChart'), {
+                    type: "doughnut",
+                    data: {
+                        labels: ['跌倒风险', '离床超时', '设备异常', '安全在床'],
+                        datasets: [{
+                            data: [0, 0, 0, 1],
+                            backgroundColor: ['#f53f3f', '#ffaa00', '#64748b', '#36cbcb'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '65%' }
+                });
+
+                loadStat();
+                loadBedList();
+                toggleAutoSync(true);
+            });
+
+            onUnmounted(() => { if(syncTimer) clearInterval(syncTimer); });
+
+            return { 
+                stat, query, allBedData, pageData, currentPage, pageSize, 
+                settingVisible, settingForm, historyVisible, historyList,
+                searchData, doAction, manualRefresh, toggleAutoSync, prevPage, nextPage, exportData,
+                openHistory, openSetting, saveSetting
+            };
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>
