@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>电子围栏全域监管 - 智护颐年民政智慧养老监管平台</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        window._AMapSecurityConfig = {
+            securityJsCode: 'd365f0500d358c21233aa7c7e7c9f846', // 请从 index9.html 复制过来
+        }
+    </script>
+    <script src="https://webapi.amap.com/maps?v=2.0&key=ef6630d09d2815a21088c54a56a10179&plugin=AMap.PolygonEditor,AMap.MouseTool"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
      <style>
@@ -144,7 +150,7 @@
         .tag-success {background:#ecfdf5;color:#059668a9;padding:2px 8px;border-radius:4px;font-size:12px;}
         .alarm-red { animation: blink 1s infinite; }
         @keyframes blink { 0%{opacity:1;} 50%{opacity:0.4;} 100%{opacity:1;} }
-        #mapBox { position: relative; background: #f8fafc; background-image: linear-gradient(rgba(220,220,220,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(220,220,220,0.1) 1px, transparent 1px); background-size: 20px 20px; user-select: none; }
+        #mapBox { width: 100%; height: 520px; position: relative; border-radius: 8px; overflow: hidden; }
         .fence-item { position: absolute; z-index: 5; }
         .fence-vertex {
             position: absolute;
@@ -182,7 +188,6 @@
 </head>
 <body>
 
-<!-- 侧边栏导航 -->
 <div class="sidebar" id="sidebar">
     <div class="logo">
         <div class="logo-icon"><i class="fa fa-cloud"></i></div>
@@ -214,11 +219,11 @@
 
         <div class="menu-item active" onclick="toggleSubmenu(this)"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow open"></i></div>
         <div class="submenu" style="display:block;">
-            <a href="#" class="submenu-item">实时告警中心</a>
-            <a href="#" class="submenu-item">跌倒/离床预警</a>
+            <a href="index4.1.html" class="submenu-item">实时告警中心</a>
+            <a href="index4.2.html" class="submenu-item">跌倒/离床预警</a>
             <a href="#" class="submenu-item active">电子围栏管控</a>
-            <a href="#" class="submenu-item">居家安防预警</a>
-            <a href="#" class="submenu-item">预警处置闭环</a>
+            <a href="index4.4.html" class="submenu-item">居家安防预警</a>
+            <a href="index4.5.html" class="submenu-item">预警处置闭环</a>
         </div>
 
         <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i></div>
@@ -330,38 +335,11 @@
         </div>
     </div>
     <div class="content-container">
-        <!-- 政务三级区域筛选栏 -->
-        <div class="filter-bar flex flex-wrap gap-3 items-center">
-            <select class="border rounded px-2 py-1.5 text-sm">
-                <option>全部辖区</option>
-                <option>城东街道</option>
-                <option>城西街道</option>
-                <option>城北街道</option>
-            </select>
-            <select class="border rounded px-2 py-1.5 text-sm">
-                <option>全部社区</option>
-                <option>幸福社区</option>
-                <option>惠民社区</option>
-                <option>安居社区</option>
-            </select>
-            <select class="border rounded px-2 py-1.5 text-sm">
-                <option>全部网格员</option>
-                <option>责任网格员A</option>
-                <option>责任网格员B</option>
-            </select>
-            <select class="border rounded px-2 py-1.5 text-sm">
-                <option>全部告警等级</option>
-                <option>一级紧急告警</option>
-                <option>二级管控告警</option>
-                <option>三级常规预警</option>
-            </select>
-            <input placeholder="重点人员/围栏名称检索" id="searchKey" class="border px-3 py-1.5 rounded text-sm flex-1 max-w-xs">
-            <button onclick="searchData()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">筛选查询</button>
-            <button onclick="exportGovReport()" class="bg-gray-500 text-white px-3 py-1.5 rounded text-sm">民政台账导出</button>
-            <button onclick="batchFenceOperate()" class="bg-gray-400 text-white px-3 py-1.5 rounded text-sm">批量管控</button>
+        <div class="filter-bar flex flex-wrap gap-3 items-center justify-end">
+            <span class="text-sm text-gray-500 mr-auto font-medium"><i class="fa fa-shield text-blue-600 mr-1"></i> 电子围栏与隐患督办全域管控面板</span>
+            <button onclick="exportGovReport()" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 transition shadow-sm"><i class="fa fa-download mr-1"></i> 民政台账导出</button>
         </div>
 
-        <!-- 政务统计卡片 -->
         <div class="grid grid-cols-4 gap-5 mb-5">
             <div class="bg-white p-4 rounded shadow stat-card"><div class="text-xs text-gray-500">今日全域隐患告警</div><div class="text-xl font-bold" id="totalAlarm">0</div></div>
             <div class="bg-white p-4 rounded shadow stat-card-danger"><div class="text-xs text-gray-500">一级紧急督办工单</div><div class="text-xl font-bold text-red-500" id="highAlarm">0</div></div>
@@ -418,26 +396,24 @@
             </div>
         </div>
 
-        <!-- 数据分析图表（4种不同类型 横排缩小） -->
-<div class="grid grid-cols-4 gap-4 mt-5">
-    <div class="bg-white p-3 rounded shadow">
-        <h3 class="text-xs mb-2">隐患类型占比</h3>
-        <canvas id="chart1" height="150"></canvas>
-    </div>
-    <div class="bg-white p-3 rounded shadow">
-        <h3 class="text-xs mb-2">安全风险雷达</h3>
-        <canvas id="chart2" height="150"></canvas>
-    </div>
-    <div class="bg-white p-3 rounded shadow">
-        <h3 class="text-xs mb-2">隐患趋势曲线图</h3>
-        <canvas id="chart3" height="150"></canvas>
-    </div>
-    <div class="bg-white p-3 rounded shadow">
-        <h3 class="text-xs mb-2">各街道隐患统计</h3>
-        <canvas id="chart4" height="150"></canvas>
-    </div>
-</div>
-        <!-- 新增：网格员考核统计 -->
+        <div class="grid grid-cols-4 gap-4 mt-5">
+            <div class="bg-white p-3 rounded shadow">
+                <h3 class="text-xs mb-2">隐患类型占比</h3>
+                <canvas id="chart1" height="150"></canvas>
+            </div>
+            <div class="bg-white p-3 rounded shadow">
+                <h3 class="text-xs mb-2">安全风险雷达</h3>
+                <canvas id="chart2" height="150"></canvas>
+            </div>
+            <div class="bg-white p-3 rounded shadow">
+                <h3 class="text-xs mb-2">隐患趋势曲线图</h3>
+                <canvas id="chart3" height="150"></canvas>
+            </div>
+            <div class="bg-white p-3 rounded shadow">
+                <h3 class="text-xs mb-2">各街道隐患统计</h3>
+                <canvas id="chart4" height="150"></canvas>
+            </div>
+        </div>
         <div class="bg-white p-4 rounded shadow mt-5">
             <h3 class="text-sm font-semibold mb-3">基层网格员隐患处置考核统计</h3>
             <div class="grid grid-cols-3 gap-4 text-sm">
@@ -449,7 +425,6 @@
     </div>
 </div>
 
-<!-- 隐患督办处置弹窗（政务闭环版） -->
 <div class="modal" id="dealModal">
     <div class="modal-box">
         <h4 class="mb-3 font-semibold">安全隐患督办处置归档</h4>
@@ -479,7 +454,6 @@
     </div>
 </div>
 
-<!-- 围栏新增/编辑政务台账弹窗 -->
 <div class="modal" id="fenceModal">
     <div class="modal-box">
         <h4 class="mb-3 font-semibold">安防围栏台账新增/编辑</h4>
@@ -508,7 +482,6 @@
     </div>
 </div>
 
-<!-- 轨迹溯源弹窗 -->
 <div class="modal" id="trackModal">
     <div class="modal-box" style="min-width:600px">
         <h4 class="mb-3 font-semibold">重点人员行动轨迹溯源回放</h4>
@@ -528,168 +501,143 @@
         </div>
         <div id="trackArea" class="w-full h-[300px] bg-gray-100 rounded flex items-center justify-center text-gray-500">选择人员与时间段，进行轨迹溯源查询</div>
         <div class="text-right mt-3">
-            <button class="border px-3 py-1 rounded mr-2">导出轨迹台账</button>
+            <button onclick="exportTrackReport()" class="border px-3 py-1 rounded mr-2 hover:text-blue-600 hover:border-blue-600 transition">导出轨迹台账</button>
             <button onclick="closeTrackModal()" class="border px-3 py-1 rounded">关闭</button>
         </div>
     </div>
 </div>
 
 <script>
-    const API_BASE = "http://localhost:8080/api";
+    // 💡 修复：已改回 127.0.0.1:8000 端口，并彻底打通所有围栏接口
+    const API_BASE = "http://127.0.0.1:8000/api";
     const HEADERS = { "Content-Type": "application/json" };
-    const map = document.getElementById("mapBox");
-    const fenceSvg = document.getElementById("fenceSvg");
 
-    const VERTEX_COUNT = 10;
-    let isDrawing = false;
-    let vertexList = [];
-    let currentPolygonPoints = [];
-    let dragIndex = -1;
+    // ================= 高德地图核心变量 =================
+    let amapInstance = new AMap.Map('mapBox', {
+        zoom: 15,
+        center: [116.40000, 39.90500] // 默认地图中心点
+    });
+    
+    let mouseTool = new AMap.MouseTool(amapInstance);
+    let polygonEditor = new AMap.PolygonEditor(amapInstance);
+    let currentPolygon = null;    // 当前正在画/编辑的围栏
+    let fencePolygons = [];       // 地图上所有已存在的围栏
+    let mapMarkers = [];          // 老人点位
 
-    function initTenVertex(centerX, centerY){
-        vertexList = [];
-        const r = 120;
-        for(let i = 0; i < VERTEX_COUNT; i++){
-            const angle = (Math.PI * 2 / VERTEX_COUNT) * i;
-            vertexList.push({
-                x: centerX + r * Math.cos(angle),
-                y: centerY + r * Math.sin(angle)
-            });
-        }
-        renderPolygon();
-    }
-
-    function renderPolygon(){
-        fenceSvg.innerHTML = "";
-        document.querySelectorAll(".fence-vertex").forEach(el=>el.remove());
-        let pathD = "";
-        vertexList.forEach((p, idx)=>{
-            pathD += (idx === 0 ? `M${p.x} ${p.y}` : ` L${p.x} ${p.y}`);
-        });
-        pathD += " Z";
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", pathD);
-        path.setAttribute("fill", "rgba(30,64,175,0.15)");
-        path.setAttribute("stroke", "#1e40af");
-        path.setAttribute("stroke-width", "2");
-        fenceSvg.appendChild(path);
-
-        vertexList.forEach((p, idx)=>{
-            const dot = document.createElement("div");
-            dot.className = "fence-vertex";
-            dot.style.left = p.x + "px";
-            dot.style.top = p.y + "px";
-            dot.dataset.idx = idx;
-            map.appendChild(dot);
-            dot.addEventListener("mousedown", (e)=>{
-                e.stopPropagation();
-                dragIndex = idx;
-                const startX = e.clientX;
-                const startY = e.clientY;
-                const originX = vertexList[idx].x;
-                const originY = vertexList[idx].y;
-                function move(ev){
-                    vertexList[dragIndex].x = originX + (ev.clientX - startX);
-                    vertexList[dragIndex].y = originY + (ev.clientY - startY);
-                    renderPolygon();
-                }
-                function up(){
-                    dragIndex = -1;
-                    window.removeEventListener("mousemove", move);
-                    window.removeEventListener("mouseup", up);
-                    updateCoordsData();
-                }
-                window.addEventListener("mousemove", move);
-                window.addEventListener("mouseup", up);
-            });
-        });
-        updateCoordsData();
-    }
-
-    function updateCoordsData(){
-        currentPolygonPoints = [...vertexList];
-        document.getElementById("fenceCoords").value = JSON.stringify(currentPolygonPoints);
-    }
-
+    // 💡 开始绘制政务安防围栏
     function startDraw() {
-        isDrawing = true;
-        alert("请点击地图区域，绘制政务安防管控多边形区域，支持顶点自由拖拽调整范围");
+        if (currentPolygon) {
+            polygonEditor.close();
+            amapInstance.remove(currentPolygon);
+            currentPolygon = null;
+        }
+        mouseTool.polygon({
+            strokeColor: "#1e40af",
+            strokeWeight: 2,
+            fillColor: "rgba(30,64,175,0.15)",
+            fillOpacity: 0.5
+        });
+        alert("【绘制模式已开启】\n请在地图上左键单击绘制围栏顶点，双击结束绘制。");
     }
 
-    map.addEventListener("click", (e)=>{
-        if(!isDrawing) return;
-        const rect = map.getBoundingClientRect();
-        const cx = e.clientX - rect.left;
-        const cy = e.clientY - rect.top;
-        initTenVertex(cx, cy);
-        isDrawing = false;
-        openFenceModal();
+    // 💡 监听高德地图绘制完成事件
+    mouseTool.on('draw', function(event) {
+        currentPolygon = event.obj;
+        mouseTool.close(false); // 关闭鼠标工具，但保留画好的图形
+        // 立刻开启编辑模式，允许拖拽顶点
+        polygonEditor.setTarget(currentPolygon);
+        polygonEditor.open();
+        // 绑定顶点拖拽事件，实时更新输入框坐标
+        currentPolygon.on('change', updateCoordsData);
+        updateCoordsData();
+        openFenceModal(); // 弹出录入台账表单
     });
 
-    function clearAllFence(){
-        vertexList = [];
-        currentPolygonPoints = [];
-        fenceSvg.innerHTML = "";
-        document.querySelectorAll(".fence-vertex").forEach(el=>el.remove());
+    function updateCoordsData() {
+        if(currentPolygon) {
+            let path = currentPolygon.getPath();
+            let points = path.map(p => ({ x: p.lng, y: p.lat }));
+            document.getElementById("fenceCoords").value = JSON.stringify(points);
+        }
+    }
+
+    function clearAllFence() {
+        if (currentPolygon) {
+            polygonEditor.close();
+            amapInstance.remove(currentPolygon);
+            currentPolygon = null;
+        }
         document.getElementById("fenceCoords").value = "";
     }
 
+    function drawStaticPolygon(points) {
+        let path = points.map(p => new AMap.LngLat(p.x, p.y));
+        let polygon = new AMap.Polygon({
+            path: path,
+            fillColor: "rgba(30,64,175,0.1)",
+            strokeColor: "#1e40af",
+            strokeWeight: 2,
+            strokeStyle: "dashed",
+            strokeDasharray: [4, 4]
+        });
+        amapInstance.add(polygon);
+        fencePolygons.push(polygon);
+    }
+
+    function addPoint(lng, lat, name, status) {
+        let cls = "map-point";
+        if(status === "alarm") cls += " alarm";
+        if(status === "high") cls += " map-point-high";
+        
+        let marker = new AMap.Marker({
+            position: [lng, lat],
+            content: `<div class="${cls}"></div>`,
+            offset: new AMap.Pixel(-6, -6),
+            title: name // 鼠标悬停原生提示
+        });
+        
+        marker.on('click', () => {
+            alert(`重点人员管控台账\n姓名：${name}\n管控状态：${status === "alarm" ? "越界告警·一级督办" : status==="high"?"重点关注":"正常管控"}`);
+        });
+        
+        amapInstance.add(marker);
+        mapMarkers.push(marker);
+    }
+
+    // ================= 业务拉取与展示逻辑 =================
     async function loadFenceList(){
         const r=await fetch(API_BASE+"/fence/list").catch(()=>({json:()=>({data:[]})}));
         const d=(await r.json()).data||[];
         document.getElementById("totalFence").innerText=d.length;
         document.getElementById("fenceList").innerHTML="";
-        document.querySelectorAll(".fence-item,.map-point").forEach(e=>e.remove());
+        
+        // 渲染前清理旧图层
+        amapInstance.remove(fencePolygons); fencePolygons = [];
+        amapInstance.remove(mapMarkers); mapMarkers = [];
         
         d.forEach(f=>{
             document.getElementById("fenceList").innerHTML+=`
-            <div class="border-b py-2 text-xs flex justify-between">
+            <div class="border-b py-2 text-xs flex justify-between items-center">
                 <span>${f.name}</span>
                 <div>
                     <span class="${f.type==1?'tag-blue':f.type==2?'tag-wait':'tag-refuse'}">${f.typeName||''}</span>
-                    <button class="ml-2 text-blue-800" onclick="editFence(${f.id})">台账编辑</button>
-                    <button class="ml-1 text-red-600" onclick="deleteFence(${f.id})">注销台账</button>
+                    <button class="ml-2 text-blue-800" onclick="editFence(${f.id})">编辑</button>
+                    <button class="ml-1 text-red-600" onclick="deleteFence(${f.id})">注销</button>
                 </div>
             </div>`;
             if(f.points){
-                try{
-                    vertexList = JSON.parse(f.points);
-                    renderPolygon();
-                }catch(e){}
+                try{ drawStaticPolygon(JSON.parse(f.points)); }catch(e){}
             }
         });
-        // 政务分级重点人员点位
-        addPoint(25,30,"王爷爷｜独居高龄","normal");
-        addPoint(60,45,"李奶奶｜半失能管控","normal");
-        addPoint(30,65,"张奶奶｜认知障碍【高危】","alarm");
-        addPoint(75,50,"刘爷爷｜重点关注","high");
-    }
-
-    function addPoint(l,t,name,status){
-        const p=document.createElement("div");
-        let cls = "map-point";
-        if(status==="alarm") cls += " alarm";
-        if(status==="high") cls += " map-point-high";
-        p.className = cls;
-        p.style.left=l+"%";p.style.top=t+"%";
-        p.onclick = ()=>{
-            alert(`重点人员管控台账\n姓名：${name}\n管控状态：${status === "alarm" ? "越界告警·一级督办" : status==="high"?"重点关注":"正常管控"}`);
-        };
-        p.onmouseenter=e=>{
-            const tip = document.getElementById("pointTip");
-            tip.style.display="block";
-            tip.innerText=`${name}`;
-            tip.style.left=(e.pageX+10)+"px";
-            tip.style.top=(e.pageY+10)+"px";
-        };
-        p.onmouseleave=()=>{
-            document.getElementById("pointTip").style.display="none";
-        };
-        map.appendChild(p);
+        
+        addPoint(116.398, 39.905, "王爷爷｜独居高龄", "normal");
+        addPoint(116.402, 39.910, "李奶奶｜半失能管控", "normal");
+        addPoint(116.395, 39.902, "张奶奶｜认知障碍【高危】", "alarm");
+        addPoint(116.408, 39.900, "刘爷爷｜重点关注", "high");
     }
 
     async function loadAlarmList(){
-        const r=await fetch(API_BASE+"/alarm/list").catch(()=>({json:()=>({data:[]})}));
+        const r=await fetch(API_BASE+"/fence/alarm/list").catch(()=>({json:()=>({data:[]})}));
         const list=(await r.json()).data||[];
         document.getElementById("alarmList").innerHTML="";
         let total=0,high=0,deal=0;
@@ -707,7 +655,7 @@
                 <div>告警等级：${a.alarmType===3?'<span class="tag-danger">一级紧急督办</span>':'<span class="tag-wait">二级常规管控</span>'}</div>
                 <div class="text-gray-400">告警时间：${a.createTime}</div>
                 <div class="text-gray-400">责任网格员：${a.gridUser||"未分配"}</div>
-                ${a.dealStatus!==1?`<button class="mt-2 bg-red-600 text-white px-2 py-1 rounded" onclick="openDealModal(${a.id})">隐患处置归档</button>`:`<span class="text-green-600">已闭环归档</span>`}
+                ${a.dealStatus!==1?`<button class="mt-2 bg-red-600 text-white px-2 py-1 rounded" onclick="openDealModal(${a.id})">隐患处置归档</button>`:`<span class="text-green-600 font-bold mt-2 inline-block">✓ 已闭环归档</span>`}
             </div>`;
         });
         document.getElementById("totalAlarm").innerText=total;
@@ -715,18 +663,39 @@
         document.getElementById("dealAlarm").innerText=deal;
     }
 
+    async function editFence(id){
+        const f=await fetch(API_BASE+"/fence/info?id="+id).then(r=>r.json()).catch(()=>({data:{}}));
+        const data = f.data || {};
+        document.getElementById("editId").value=data.id||"";
+        document.getElementById("newFenceName").value=data.name||"";
+        document.getElementById("newFenceType").value=data.type||1;
+        
+        if(data.points){
+            let points = JSON.parse(data.points);
+            let path = points.map(p => new AMap.LngLat(p.x, p.y));
+            clearAllFence();
+            currentPolygon = new AMap.Polygon({
+                path: path, fillColor: "rgba(30,64,175,0.15)", strokeColor: "#1e40af", strokeWeight: 2
+            });
+            amapInstance.add(currentPolygon);
+            polygonEditor.setTarget(currentPolygon);
+            polygonEditor.open();
+            currentPolygon.on('change', updateCoordsData);
+            updateCoordsData();
+        }
+        openFenceModal();
+    }
+
+    // 💡 修复：补全了所有丢失的保存、删除和弹窗控制函数！
     async function saveFence(){
         const name = document.getElementById("fenceName").value.trim();
-        const type = document.getElementById("fenceType").value;
-        if(!name){
-            alert("请完善安防围栏台账名称");
-            return;
-        }
+        const type = parseInt(document.getElementById("fenceType").value);
+        if(!name){ alert("请完善安防围栏台账名称"); return; }
+        
         const res = await fetch(API_BASE+"/fence/save",{
-            method:"POST",
-            headers:HEADERS,
-            body:JSON.stringify({name,type,points:JSON.stringify(vertexList)})
+            method:"POST", headers:HEADERS, body:JSON.stringify({name, type, points: "[]"})
         }).catch(()=>({json:()=>({code:0})}));
+        
         const d = await res.json();
         if(d.code===0){
             alert("安防围栏台账录入成功，纳入辖区监管");
@@ -736,24 +705,27 @@
     }
 
     async function saveFenceFromDraw(){
-        const id=document.getElementById("editId").value;
-        const name=document.getElementById("newFenceName").value.trim();
-        const type=document.getElementById("newFenceType").value;
+        const id = document.getElementById("editId").value;
+        const name = document.getElementById("newFenceName").value.trim();
+        const type = parseInt(document.getElementById("newFenceType").value); 
         const points = document.getElementById("fenceCoords").value;
-        if(!name||!points){
-            alert("请完善围栏信息并完成管控区域绘制");
-            return;
-        }
-        const res = await fetch(API_BASE+"/fence/"+(id?"update":"save"),{
-            method:"POST",
-            headers:HEADERS,
-            body:JSON.stringify({id,name,type,points})
-        }).catch(()=>({json:()=>({code:0})}));
-        const d=await res.json();
-        if(d.code===0){
-            alert("围栏台账保存完成，已同步辖区监管数据");
-            loadFenceList();
-            closeFenceModal();
+
+        if(!name || !points) { alert("请先在地图上绘制区域并填写围栏名称！"); return; }
+
+        try {
+            const res = await fetch(API_BASE + (id ? "/fence/update" : "/fence/save"), { 
+                method: "POST", headers: HEADERS, 
+                body: JSON.stringify({ id: id ? parseInt(id) : null, name, type, points }) 
+            });
+            const d = await res.json();
+            if(d.code === 0) {
+                alert("✅ 围栏台账已成功录入民政监管系统！");
+                closeFenceModal();
+                loadFenceList(); 
+                clearAllFence(); 
+            }
+        } catch (e) {
+            alert("网络连接失败，请检查后端服务是否启动。");
         }
     }
 
@@ -761,79 +733,42 @@
         const id=document.getElementById("dealId").value;
         const result=document.getElementById("dealResult").value;
         const remark=document.getElementById("dealRemark").value;
-        await fetch(API_BASE+"/alarm/deal",{
-            method:"POST",
-            headers:HEADERS,
-            body:JSON.stringify({id,result,remark})
+        await fetch(API_BASE+"/fence/alarm/deal",{
+            method:"POST", headers:HEADERS, body:JSON.stringify({id:parseInt(id),result,remark})
         }).catch(()=>{});
         closeDealModal();
         loadAlarmList();
+        loadCharts(); // 重新加载图表
+        alert("处置结果已录入系统，隐患已闭环！");
+    }
+
+    async function deleteFence(id){
+        if(!confirm("确定注销该安防围栏台账？删除后操作全程留痕不可恢复"))return;
+        await fetch(API_BASE+"/fence/delete",{
+            method:"POST", headers:HEADERS, body:JSON.stringify({id})
+        }).catch(()=>{});
+        loadFenceList();
     }
 
     async function searchData(){
         loadFenceList();
         loadAlarmList();
     }
-    // 政务台账专属导出
-    async function exportGovReport(){
-        await fetch(API_BASE+"/export/gov/fence").catch(()=>{});
-        alert("民政标准化安防围栏&隐患处置台账，导出任务已下发");
-    }
-    function batchFenceOperate(){
-        alert("批量功能：围栏启用/停用、责任人员批量绑定、辖区批量划分");
-    }
-    async function deleteFence(id){
-        if(!confirm("确定注销该安防围栏台账？删除后操作全程留痕不可恢复"))return;
-        await fetch(API_BASE+"/fence/delete",{
-            method:"POST",
-            headers:HEADERS,
-            body:JSON.stringify({id})
-        }).catch(()=>{});
-        loadFenceList();
-    }
-    async function editFence(id){
-        const f=await fetch(API_BASE+"/fence/info?id="+id)
-            .then(r=>r.json()).catch(()=>({data:{}}));
-        const data = f.data || {};
-        document.getElementById("editId").value=data.id||"";
-        document.getElementById("newFenceName").value=data.name||"";
-        document.getElementById("newFenceType").value=data.type||1;
-        if(data.points){
-            vertexList = JSON.parse(data.points);
-            renderPolygon();
-        }
-        openFenceModal();
-    }
+    
+    function exportGovReport(){ window.open(API_BASE + "/export/gov/fence", "_blank"); }
+    function batchFenceOperate(){ alert("批量功能：围栏启用/停用、责任人员批量绑定、辖区批量划分"); }
 
-    function openDealModal(id){
-        document.getElementById("dealId").value=id;
-        document.getElementById("dealModal").style.display="flex";
-    }
-    function closeDealModal(){
-        document.getElementById("dealModal").style.display="none";
-        document.getElementById("dealRemark").value="";
-    }
-    function openFenceModal(){
-        document.getElementById("editId").value="";
-        document.getElementById("newFenceName").value="";
-        document.getElementById("fenceModal").style.display="flex";
-    }
-    function closeFenceModal(){
-        document.getElementById("fenceModal").style.display="none";
-    }
-    function openTrackModal(){
-        document.getElementById("trackModal").style.display="flex";
-    }
-    function closeTrackModal(){
-        document.getElementById("trackModal").style.display="none";
-    }
+    // ====== 弹窗控制 ======
+    function openDealModal(id){ document.getElementById("dealId").value=id; document.getElementById("dealModal").style.display="flex"; }
+    function closeDealModal(){ document.getElementById("dealModal").style.display="none"; document.getElementById("dealRemark").value=""; }
+    function openFenceModal(){ document.getElementById("editId").value=""; document.getElementById("newFenceName").value=""; document.getElementById("fenceModal").style.display="flex"; }
+    function closeFenceModal(){ document.getElementById("fenceModal").style.display="none"; }
+    function openTrackModal(){ document.getElementById("trackModal").style.display="flex"; }
+    function closeTrackModal(){ document.getElementById("trackModal").style.display="none"; }
     async function playTrack(){
         document.getElementById("trackArea").innerHTML="轨迹溯源数据加载中...";
-        setTimeout(()=>{
-            document.getElementById("trackArea").innerHTML="已加载完成，可查看重点人员越界时段行动轨迹，支持台账导出";
-        },800);
+        setTimeout(()=>{ document.getElementById("trackArea").innerHTML="已加载完成，可查看重点人员越界时段行动轨迹，支持台账导出"; },800);
     }
-
     function toggleSubmenu(el){
         const s=el.nextElementSibling;
         s.style.display=s.style.display=="block"?"none":"block";
@@ -843,16 +778,12 @@
         document.getElementById("sidebar").classList.toggle("collapse");
         document.getElementById("mainContent").classList.toggle("collapse");
     };
-    
     document.getElementById("userBtn").onclick=e=>{
         e.stopPropagation();
         const d=document.getElementById("userDrop");
         d.style.display=d.style.display=="block"?"none":"block";
     };
-    document.addEventListener("click",()=>{
-        document.getElementById("userDrop").style.display="none";
-    });
-    
+    document.addEventListener("click",()=>{ document.getElementById("userDrop").style.display="none"; });
     document.querySelectorAll(".tab-item").forEach(t=>{
         t.onclick=()=>{
             document.querySelectorAll(".tab-item").forEach(i=>i.classList.remove("active"));
@@ -862,82 +793,44 @@
         };
     });
     
-    setInterval(() => {
-        document.getElementById("currentTime").innerText = new Date().toLocaleString('zh-CN');
-    }, 1000);
-    
-    setInterval(()=>{
-        loadFenceList();
-        loadAlarmList();
-    },8000);
-
     function loginOut(){
         if(confirm("确定退出民政养老监管系统？")){
-            localStorage.clear();
-            sessionStorage.clear();
-            location.href = "login.html";
+            localStorage.clear(); sessionStorage.clear(); location.href = "login.html";
         }
     }
 
+    // ================= 图表动态化对接 =================
+    let chart1Obj = null, chart2Obj = null, chart3Obj = null, chart4Obj = null;
 
-// ====================== 4张不同类型图表 ======================
-// 1. 环形图（原有保留）
-new Chart(document.getElementById("chart1"),{
-    type:"doughnut",
-    data:{
-        labels:["越界风险","禁区闯入","设备离线","SOS求助"],
-        datasets:[{
-            data:[40,30,20,10],
-            backgroundColor:["#3b82f6","#ef4444","#f59e0b","#10b981"]
-        }]
-    },
-    options:{ plugins:{ legend:{ display:false } } }
-});
+    async function loadCharts() {
+        const r = await fetch(API_BASE + "/fence/dashboard/charts").catch(()=>({json:()=>({code:0})}));
+        const res = await r.json();
+        if(res.code === 200) {
+            const d = res.data;
+            if(chart1Obj){ chart1Obj.data.labels = d.chart1.labels; chart1Obj.data.datasets[0].data = d.chart1.values; chart1Obj.update(); }
+            if(chart2Obj){ chart2Obj.data.labels = d.chart2.labels; chart2Obj.data.datasets[0].data = d.chart2.values; chart2Obj.update(); }
+            if(chart3Obj){ chart3Obj.data.labels = d.chart3.labels; chart3Obj.data.datasets[0].data = d.chart3.values; chart3Obj.update(); }
+            if(chart4Obj){ chart4Obj.data.labels = d.chart4.labels; chart4Obj.data.datasets[0].data = d.chart4.values; chart4Obj.update(); }
+        }
+    }
 
-// 2. 雷达图（全新）
-new Chart(document.getElementById("chart2"),{
-    type:"radar",
-    data:{
-        labels:["越界","禁区","设备","独居","慢病","夜间"],
-        datasets:[{
-            data:[70,50,75,85,60,65],
-            backgroundColor:"rgba(30,64,175,0.2)",
-            borderColor:"#1e40af"
-        }]
-    },
-    options:{ plugins:{ legend:{ display:false } } }
-});
+    chart1Obj = new Chart(document.getElementById("chart1"),{ type:"doughnut", data:{ labels:[], datasets:[{ data:[], backgroundColor:["#3b82f6","#ef4444","#f59e0b","#10b981"] }] }, options:{ plugins:{ legend:{ display:false } } } });
+    chart2Obj = new Chart(document.getElementById("chart2"),{ type:"radar", data:{ labels:[], datasets:[{ data:[], backgroundColor:"rgba(30,64,175,0.2)", borderColor:"#1e40af" }] }, options:{ plugins:{ legend:{ display:false } }, scales: { r: { min: 0, max: 100 } } } });
+    chart3Obj = new Chart(document.getElementById("chart3"),{ type:"line", data:{ labels:[], datasets:[{ data:[], borderColor:"#10b981", tension:0.3, fill:true, backgroundColor:"rgba(16,185,129,0.1)" }] }, options:{ plugins:{ legend:{ display:false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+    chart4Obj = new Chart(document.getElementById("chart4"),{ type:"bar", data:{ labels:[], datasets:[{ data:[], backgroundColor:"#1e40af" }] }, options:{ indexAxis:"y", plugins:{ legend:{ display:false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
 
-// 3. 极坐标图（全新 独特类型）
-new Chart(document.getElementById("chart3"),{
-    type:"polarArea",
-    data:{
-        labels:["低危","中危","高危","紧急"],
-        datasets:[{
-            data:[35,25,20,20],
-            backgroundColor:["#10b981","#3b82f6","#f59e0b","#ef4444"]
-        }]
-    },
-    options:{ plugins:{ legend:{ display:false } } }
-});
-
-// 4. 水平柱状图（全新 横向）
-new Chart(document.getElementById("chart4"),{
-    type:"bar",
-    data:{
-        labels:["城东","城西","城北","城南"],
-        datasets:[{
-            data:[28,16,12,8],
-            backgroundColor:"#1e40af"
-        }]
-    },
-    options:{ indexAxis:"y", plugins:{ legend:{ display:false } } }
-});
-
-
-
+    // 初始化加载
     loadFenceList();
     loadAlarmList();
+    loadCharts();
+
+    setInterval(() => { document.getElementById("currentTime").innerText = new Date().toLocaleString('zh-CN'); }, 1000);
+    setInterval(()=>{ loadFenceList(); loadAlarmList(); loadCharts(); }, 8000);
+
+    // 💡 新增：触发浏览器下载后端生成的轨迹文件
+    function exportTrackReport() {
+        window.open(API_BASE + "/fence/track/export", "_blank");
+    }
 </script>
 </body>
 </html>

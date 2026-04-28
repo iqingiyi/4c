@@ -159,3 +159,35 @@ class AlarmRecord(Base):
     is_timeout = Column(Integer, default=0) # 是否超时 (1是 0否)
     is_read = Column(Integer, default=0)    # 是否已读 (1是 0否)
     logs = Column(Text, default="[]")       # 操作日志 (存JSON字符串数组)
+# ==================== 4.3 电子围栏表 ====================
+class Fence(Base):
+    __tablename__ = "fences"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100))
+    type = Column(Integer)            # 1:安全区 2:限制区 3:禁区
+    type_name = Column(String(50))    # 区域类型名称
+    points = Column(Text)             # 存放 SVG 多边形顶点坐标 (JSON字符串)
+
+# ==================== 4.4 居家安防表 ====================
+class HomeSecurityDevice(Base):
+    __tablename__ = "home_security_devices"
+    id = Column(Integer, primary_key=True, index=True)
+    device_code = Column(String(50))
+    address = Column(String(100))
+    status = Column(String(20)) # 在线, 离线故障
+    worker = Column(String(50))
+    last_inspect = Column(String(50))
+
+class HomeSecurityRecord(Base):
+    __tablename__ = "home_security_records"
+    id = Column(Integer, primary_key=True, index=True)
+    record_no = Column(String(50))
+    grid_build = Column(String(100))
+    alarm_type = Column(String(50))
+    risk_level = Column(Integer) # 1:红, 2:橙, 3:黄
+    worker = Column(String(50))
+    status = Column(Integer) # 0:未整改, 1:整改中, 2:待复查, 3:已销号
+    time_limit = Column(String(50))
+    remark = Column(Text)
+    is_archive = Column(Integer, default=0)
+    archive_time = Column(String(50))

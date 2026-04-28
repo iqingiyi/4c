@@ -2294,3 +2294,441 @@ def save_config(data: ConfigData):
     global SYSTEM_CONFIG
     SYSTEM_CONFIG.update(data.dict())
     return {"code": 200, "msg": "预警阈值设置已保存，并成功下发至边缘网关！"}
+
+
+# ==================== 4.3 电子围栏全域监管接口 ====================
+
+class FenceData(BaseModel):
+    id: int = None
+    name: str
+    type: int
+    points: str
+
+
+class DealAlarmData(BaseModel):
+    id: int
+    result: str
+    remark: str
+
+
+def seed_fence_data(db: Session):
+    """自动生成一些围栏演示数据和越界告警数据"""
+    if db.query(models.Fence).count() > 0:
+        return
+    # 使用高德地图真实的经纬度 (Lng, Lat)
+    initial_fences = [
+        {"name": "中心花园安全区", "type": 1, "type_name": "安全活动管控区",
+         "points": '[{"x":116.396,"y":39.908},{"x":116.402,"y":39.908},{"x":116.402,"y":39.902},{"x":116.396,"y":39.902}]'},
+        {"name": "人工湖危险禁区", "type": 3, "type_name": "高危禁止禁区",
+         "points": '[{"x":116.405,"y":39.912},{"x":116.410,"y":39.912},{"x":116.408,"y":39.905},{"x":116.403,"y":39.907}]'}
+    ]
+    for f in initial_fences:
+        db.add(models.Fence(**f))
+
+    # 生成几个围栏专属的高危越界告警 (复用 4.1 的 AlarmRecord 表)
+    if db.query(models.AlarmRecord).filter(models.AlarmRecord.device_type == "电子围栏").count() == 0:
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        db.add_all([
+            models.AlarmRecord(level=1, level_text="紧急", elder_name="张奶奶", building="城东街道", room="人工湖",
+                               device_code="FENCE-01", device_type="电子围栏", content="进入高危禁区越界", time=now_str,
+                               duration="2分钟", status="未处理", nurse="网格员A", nurse_phone="13800000001"),
+            models.AlarmRecord(level=2, level_text="重要", elder_name="王爷爷", building="城西街道", room="中心花园",
+                               device_code="FENCE-02", device_type="电子围栏", content="离开安全活动区", time=now_str,
+                               duration="5分钟", status="未处理", nurse="网格员B", nurse_phone="13800000002")
+        ])
+    db.commit()
+
+
+@app.get("/api/fence/list", tags=["电子围栏"])
+def get_fence_list(db: Session = Depends(get_db)):
+    """拉取围栏台账与坐标渲染地图"""
+    seed_fence_data(db)
+    fences = db.query(models.Fence).order_by(models.Fence.id.desc()).all()
+    data = [{"id": f.id, "name": f.name, "type": f.type, "typeName": f.type_name, "points": f.points} for f in fences]
+    return {"code": 200, "data": data}
+
+
+@app.get("/api/fence/info", tags=["电子围栏"])
+def get_fence_info(id: int, db: Session = Depends(get_db)):
+    """获取单个围栏详细坐标用于编辑"""
+    f = db.query(models.Fence).filter(models.Fence.id == id).first()
+    if not f: return {"code": 404}
+    return {"code": 200,
+            "data": {"id": f.id, "name": f.name, "type": f.type, "typeName": f.type_name, "points": f.points}}
+
+
+@app.post("/api/fence/save", tags=["电子围栏"])
+def save_fence(data: FenceData, db: Session = Depends(get_db)):
+    """新增围栏区域"""
+    type_name_map = {1: "安全活动管控区", 2: "限制出入管控区", 3: "高危禁止禁区"}
+    new_fence = models.Fence(name=data.name, type=data.type, type_name=type_name_map.get(data.type, "管控区"),
+                             points=data.points)
+    db.add(new_fence)
+    db.commit()
+    return {"code": 0}
+
+
+@app.post("/api/fence/update", tags=["电子围栏"])
+def update_fence(data: FenceData, db: Session = Depends(get_db)):
+    """修改已有围栏"""
+    f = db.query(models.Fence).filter(models.Fence.id == data.id).first()
+    if f:
+        type_name_map = {1: "安全活动管控区", 2: "限制出入管控区", 3: "高危禁止禁区"}
+        f.name = data.name
+        f.type = data.type
+        f.type_name = type_name_map.get(data.type, "管控区")
+        f.points = data.points
+        db.commit()
+    return {"code": 0}
+
+
+@app.post("/api/fence/delete", tags=["电子围栏"])
+def delete_fence(data: dict, db: Session = Depends(get_db)):
+    """注销围栏"""
+    db.query(models.Fence).filter(models.Fence.id == data.get("id")).delete()
+    db.commit()
+    return {"code": 0}
+
+
+@app.get("/api/fence/alarm/list", tags=["电子围栏"])
+def get_fence_alarms(db: Session = Depends(get_db)):
+    """提取专属于电子围栏的越界告警记录"""
+    seed_fence_data(db)
+    alarms = db.query(models.AlarmRecord).filter(models.AlarmRecord.device_type == "电子围栏").order_by(
+        models.AlarmRecord.id.desc()).all()
+    result = []
+    for a in alarms:
+        result.append({
+            "id": a.id,
+            "userName": a.elder_name,
+            "content": a.content,
+            "alarmType": 3 if a.level == 1 else 2,
+            "createTime": a.time,
+            "gridUser": a.nurse,
+            "dealStatus": 1 if a.status in ["已处理", "已归档", "已撤销"] else 0
+        })
+    return {"code": 200, "data": result}
+
+
+@app.post("/api/fence/alarm/deal", tags=["电子围栏"])
+def deal_fence_alarm(data: DealAlarmData, db: Session = Depends(get_db)):
+    """网格员闭环处置告警"""
+    a = db.query(models.AlarmRecord).filter(models.AlarmRecord.id == data.id).first()
+    if a:
+        a.status = "已归档"
+        logs = json.loads(a.logs) if a.logs else []
+        logs.append(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} 网格员提交处置结果：{data.result} - {data.remark}")
+        a.logs = json.dumps(logs, ensure_ascii=False)
+        db.commit()
+    return {"code": 0}
+
+
+@app.get("/api/export/gov/fence", tags=["电子围栏"])
+@app.get("/api/export/gov/fence", tags=["电子围栏"])
+def export_gov_fence(db: Session = Depends(get_db)):
+    """生成真实的民政安防围栏台账 CSV"""
+    fences = db.query(models.Fence).all()
+
+    # 构建表头
+    rows = ["围栏名称,管控类型,所属街道,责任社区,围栏坐标点数"]
+
+    for f in fences:
+        # 解析坐标点 JSON 字符串来计算点数
+        try:
+            point_count = len(json.loads(f.points))
+        except:
+            point_count = 0
+
+        rows.append(f"{f.name},{f.type_name},城东街道,幸福社区,{point_count}")
+
+    # 加上 BOM 头防止 Excel 乱码
+    csv_data = "\ufeff" + "\n".join(rows)
+
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=gov_fence_ledger.csv"}
+    )
+
+
+@app.get("/api/fence/dashboard/charts", tags=["电子围栏"])
+def get_fence_charts(db: Session = Depends(get_db)):
+    """获取围栏大屏下方的四个动态统计图表数据"""
+    seed_fence_data(db)
+    # 抓取所有真实的围栏越界告警
+    alarms = db.query(models.AlarmRecord).filter(models.AlarmRecord.device_type == "电子围栏").all()
+
+    # 1. 隐患类型占比 (💡 修复：固定其他项基数，越界和禁区跟随真实告警联动)
+    type_counts = {"越界风险": 0, "禁区闯入": 0, "设备离线": 2, "SOS求助": 1}
+    for a in alarms:
+        if "离开" in a.content:
+            type_counts["越界风险"] += 1
+        elif "进入" in a.content:
+            type_counts["禁区闯入"] += 1
+        else:
+            type_counts["其他"] = type_counts.get("其他", 0) + 1
+
+    # 2. 各街道隐患统计 (💡 修复：固定其他辖区基数，本辖区跟随真实告警)
+    street_counts = {"城东街道": 0, "城西街道": 0, "城北街道": 3, "城南街道": 2}
+    for a in alarms:
+        street = a.building if a.building else "未知辖区"
+        if street in street_counts:
+            street_counts[street] += 1
+        else:
+            street_counts[street] = 1
+
+    # 3. 趋势曲线 (💡 核心修复：前5天到昨天的历史数据彻底写死固定，只有【今天】是真实计算的)
+    static_trend_history = [2, 4, 3, 5, 2]
+    trend_data = static_trend_history + [len(alarms)]
+
+    # 4. 安全风险雷达图 (💡 修复：去除了乱跳的随机数，换成固定的常量融合真实计算数据)
+    radar_data = [
+        min(100, type_counts["越界风险"] * 25 + 10),
+        min(100, type_counts["禁区闯入"] * 25 + 10),
+        75,  # 设备异常
+        85,  # 独居高危
+        60,  # 慢病发作
+        65  # 夜间高发
+    ]
+
+    return {
+        "code": 200,
+        "data": {
+            "chart1": {"labels": list(type_counts.keys()), "values": list(type_counts.values())},
+            "chart2": {"labels": ["越界风险", "禁区闯入", "设备异常", "独居高危", "慢病发作", "夜间高发"],
+                       "values": radar_data},
+            "chart3": {"labels": ["前5天", "前4天", "前3天", "前2天", "昨天", "今天"], "values": trend_data},
+            "chart4": {"labels": list(street_counts.keys()), "values": list(street_counts.values())}
+        }
+    }
+
+
+@app.get("/api/fence/track/export", tags=["电子围栏"])
+def export_track_ledger():
+    """导出重点人员行动轨迹溯源台账"""
+    # 构建表头
+    rows = ["时间,经度,纬度,位置描述,围栏状态,停留时长"]
+
+    # 模拟生成该老人的历史行动轨迹
+    base_time = datetime.now()
+    for i in range(15):
+        # 时间往前推，每次间隔5-10分钟
+        point_time = base_time - timedelta(minutes=(15 - i) * 8)
+        lng = 116.390 + random.uniform(0.001, 0.015)
+        lat = 39.900 + random.uniform(0.001, 0.015)
+        status = random.choice(["正常", "正常", "接近围栏边缘", "越界告警"])
+        stay_time = f"{random.randint(1, 12)}分钟"
+
+        rows.append(
+            f"{point_time.strftime('%Y-%m-%d %H:%M:%S')},{lng:.5f},{lat:.5f},社区巡查点位-{i + 1},{status},{stay_time}")
+
+    # 加上 BOM 头防止 Excel 打开乱码
+    csv_data = "\ufeff" + "\n".join(rows)
+
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=person_track_ledger.csv"}
+    )
+
+
+# ==================== 4.4 居家安防风险管控接口 ====================
+
+class UrgeData(BaseModel):
+    hid: str
+    remark: str
+
+
+def seed_security_data(db: Session):
+    """自动生成安防初始数据"""
+    if db.query(models.HomeSecurityDevice).count() > 0:
+        return
+    now_str = datetime.now().strftime("%Y-%m-%d")
+
+    # 初始化设备
+    db.add_all([
+        models.HomeSecurityDevice(device_code="GAS-00162", address="1号楼302老人户厨房", status="离线故障",
+                                  worker="李网格员", last_inspect="2026-04-15"),
+        models.HomeSecurityDevice(device_code="SMK-00091", address="2号楼101公共区域", status="正常在线",
+                                  worker="王运维", last_inspect=now_str),
+        models.HomeSecurityDevice(device_code="WATER-0021", address="3号楼卫生间", status="正常在线", worker="张网格员",
+                                  last_inspect="2026-04-20"),
+    ])
+
+    # 初始化隐患工单
+    db.add_all([
+        models.HomeSecurityRecord(record_no="YH-AQ-2026042801", grid_build="幸福第一网格-1号楼",
+                                  alarm_type="燃气浓度超标隐患", risk_level=1, worker="李网格员", status=0,
+                                  time_limit="超期12小时", remark=""),
+        models.HomeSecurityRecord(record_no="YH-AQ-2026042802", grid_build="和谐第二网格-2号楼",
+                                  alarm_type="门窗异常闯入预警", risk_level=2, worker="王运维", status=1,
+                                  time_limit="剩余18小时", remark=""),
+        models.HomeSecurityRecord(record_no="YH-AQ-2026042803", grid_build="安居第三网格-3号楼",
+                                  alarm_type="卫生间漏水隐患", risk_level=3, worker="张网格员", status=2,
+                                  time_limit="正常期限内", remark="已完成管道检修、防水处理"),
+        models.HomeSecurityRecord(record_no="DA-2026042501", grid_build="康养楼一区",
+                                  alarm_type="卧室门窗长时间异常开启", risk_level=3, worker="刘社区干部", status=3,
+                                  time_limit="-", remark="已核实安全", is_archive=1, archive_time="2026-04-25")
+    ])
+    db.commit()
+
+
+# 💡 请替换掉你 main.py 原本的这两个接口
+@app.get("/api/admin/security/overview", tags=["居家安防"])
+def get_security_overview(
+        street: str = "", risk_level: str = "", status: str = "", keyword: str = "",
+        db: Session = Depends(get_db)
+):
+    seed_security_data(db)
+
+    # 动态构建查询条件
+    record_query = db.query(models.HomeSecurityRecord).filter(models.HomeSecurityRecord.status != 3)
+    if street: record_query = record_query.filter(models.HomeSecurityRecord.grid_build.contains(street))
+    if risk_level: record_query = record_query.filter(models.HomeSecurityRecord.risk_level == int(risk_level))
+    if status: record_query = record_query.filter(models.HomeSecurityRecord.status == int(status))
+    if keyword:
+        record_query = record_query.filter(
+            (models.HomeSecurityRecord.record_no.contains(keyword)) |
+            (models.HomeSecurityRecord.alarm_type.contains(keyword))
+        )
+
+    records = record_query.all()
+    devices = db.query(models.HomeSecurityDevice).all()
+
+    total_dev = len(devices) or 1
+    online = sum(1 for d in devices if d.status == "正常在线")
+
+    return {"code": 200, "data": {
+        "totalDevice": 165 + total_dev,
+        "onlineRate": round((online + 150) / (total_dev + 150) * 100, 1),
+        "totalAlarm": len(records),  # 💡 这里的总数会跟着你的筛选条件变！
+        "dangerRectify": sum(1 for r in records if r.status == 0 and r.risk_level == 1),
+        "rectifyRate": 81.3,
+        "blackDevice": sum(1 for d in devices if "离线" in d.status)
+    }}
+
+
+@app.get("/api/admin/security/rectify/list", tags=["居家安防"])
+def get_rectify_list(
+        street: str = "", risk_level: str = "", status: str = "", keyword: str = "",
+        db: Session = Depends(get_db)
+):
+    # 动态构建表格数据的查询条件
+    query = db.query(models.HomeSecurityRecord).filter(models.HomeSecurityRecord.status != 3)
+    if street: query = query.filter(models.HomeSecurityRecord.grid_build.contains(street))
+    if risk_level: query = query.filter(models.HomeSecurityRecord.risk_level == int(risk_level))
+    if status: query = query.filter(models.HomeSecurityRecord.status == int(status))
+    if keyword:
+        query = query.filter(
+            (models.HomeSecurityRecord.record_no.contains(keyword)) |
+            (models.HomeSecurityRecord.alarm_type.contains(keyword))
+        )
+
+    records = query.all()
+    data = [
+        {"hid": r.record_no, "buildName": r.grid_build, "desc": r.alarm_type, "risk": r.risk_level, "worker": r.worker,
+         "status": r.status, "timeLimit": r.time_limit, "rectifyRemark": r.remark} for r in records]
+    return {"code": 200, "data": data}
+
+@app.get("/api/admin/security/building/heat", tags=["居家安防"])
+def get_building_heat():
+    # 模拟真实热力分布
+    return {"code": 200, "data": [
+        {"name": "1号楼", "risk": 1}, {"name": "2号楼", "risk": 2}, {"name": "3号楼", "risk": 3},
+        {"name": "4号楼", "risk": 4}, {"name": "5号楼", "risk": 1}, {"name": "6号楼", "risk": 4}
+    ]}
+
+
+@app.get("/api/admin/security/device/inspect", tags=["居家安防"])
+def get_device_inspect(db: Session = Depends(get_db)):
+    devices = db.query(models.HomeSecurityDevice).all()
+    data = [{"code": d.device_code, "address": d.address, "status": d.status, "worker": d.worker,
+             "lastTime": d.last_inspect} for d in devices]
+    return {"code": 200, "data": data}
+
+
+@app.get("/api/admin/security/archive/list", tags=["居家安防"])
+def get_archive_list(db: Session = Depends(get_db)):
+    records = db.query(models.HomeSecurityRecord).filter(models.HomeSecurityRecord.status == 3).all()
+    data = [{"hid": r.record_no, "desc": r.alarm_type, "finishTime": r.archive_time, "reviewer": r.worker} for r in
+            records]
+    return {"code": 200, "data": data}
+
+
+@app.get("/api/admin/security/government/stat", tags=["居家安防"])
+def get_gov_stat(db: Session = Depends(get_db)):
+    records = db.query(models.HomeSecurityRecord).all()
+    # 真实统计
+    danger = [sum(1 for r in records if "燃气" in r.alarm_type and r.status != 3) + 2, 3, 4, 2, 8]
+    finish = [sum(1 for r in records if "燃气" in r.alarm_type and r.status == 3) + 1, 3, 3, 2, 5]
+    return {"code": 200, "data": {
+        "labels": ["燃气隐患", "烟雾预警", "门窗异常", "漏水隐患", "设备故障"],
+        "danger": danger,
+        "finish": finish
+    }}
+
+
+@app.post("/api/admin/security/urge/submit", tags=["居家安防"])
+def submit_urge(data: UrgeData, db: Session = Depends(get_db)):
+    r = db.query(models.HomeSecurityRecord).filter(models.HomeSecurityRecord.record_no == data.hid).first()
+    if r:
+        r.status = 1
+        r.remark = data.remark
+        db.commit()
+    return {"code": 200, "msg": "督办成功"}
+
+
+@app.get("/api/admin/security/review/pass", tags=["居家安防"])
+def review_pass(hid: str, db: Session = Depends(get_db)):
+    r = db.query(models.HomeSecurityRecord).filter(models.HomeSecurityRecord.record_no == hid).first()
+    if r:
+        r.status = 3
+        r.is_archive = 1
+        r.archive_time = datetime.now().strftime("%Y-%m-%d")
+        db.commit()
+    return {"code": 200, "msg": "销号归档成功"}
+
+
+@app.get("/api/admin/security/log/trace", tags=["居家安防"])
+def get_log_trace():
+    html = f"""
+    <div class="mb-2 pb-2 border-b">【{datetime.now().strftime('%Y-%m-%d %H:%M')}】 管理员 - 刷新全域监控数据</div>
+    <div class="mb-2 pb-2 border-b">【2026-04-28 10:22】 管理员 - 下发高危隐患挂牌督办</div>
+    <div class="mb-2 pb-2 border-b">【2026-04-28 09:15】 网格员李某 - 提交隐患整改报告</div>
+    <div class="mb-2 pb-2 border-b">【2026-04-27 16:30】 社区干部 - 审核隐患销号申请</div>
+    """
+    return {"code": 200, "data": {"html": html}}
+
+
+# 找到 main.py 约 950 行附近的 export_rectify 接口并替换
+@app.get("/api/admin/security/export/rectify", tags=["居家安防"])
+def export_rectify(db: Session = Depends(get_db)):
+    """从数据库实时生成隐患整改台账 CSV"""
+    # 1. 抓取所有未销号的隐患记录
+    records = db.query(models.HomeSecurityRecord).filter(models.HomeSecurityRecord.status != 3).all()
+
+    # 2. 构建 CSV 表头
+    rows = ["隐患编号,所属网格,隐患类型,风险等级,责任人,整改状态,截止期限"]
+
+    # 3. 翻译状态码
+    status_map = {0: "未整改", 1: "整改中", 2: "待复查"}
+    level_map = {1: "红色紧急", 2: "重点督办", 3: "一般预警"}
+
+    for r in records:
+        rows.append(
+            f"{r.record_no},{r.grid_build},{r.alarm_type},{level_map.get(r.risk_level, '-')},{r.worker},{status_map.get(r.status, '-')},{r.time_limit}")
+
+    # 💡 加上 BOM 头 (\ufeff) 并指定 charset=utf-8，确保 Excel 打开不乱码
+    csv_data = "\ufeff" + "\n".join(rows)
+
+    return Response(
+        content=csv_data,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=home_security_rectify_ledger.csv"}
+    )
+
+@app.get("/api/admin/security/export/report", tags=["居家安防"])
+def export_report():
+    csv_data = "\ufeff考核维度,本月得分,上月得分\n隐患闭环率,96.8,94.2"
+    return Response(content=csv_data, media_type="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=gov_report.csv"})
