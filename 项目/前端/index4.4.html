@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>居家安防风险管控工作台 | 智护颐年-民政社区智慧养老监管平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft Yahei",sans-serif; background: #f1f5f9; color: #334155; }
+        .sidebar { width: 190px; background: #fff; border-right: 1px solid #e2e8f0; height: 100vh; position: fixed; left: 0; top: 0; padding: 16px 0; z-index: 100; transition: 0.3s; }
+        .sidebar.collapse { width: 64px; }
+        .sidebar.collapse .logo-text,.sidebar.collapse .menu-item span,.sidebar.collapse .menu-arrow,.sidebar.collapse .ai-box { display: none; }
+        .sidebar.collapse .menu-item { justify-content: center; }
+        .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background: #0f53ba6a; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+        .logo-text h1 { font-size: 17px; font-weight: 600; color: #1e293b64; }
+        .logo-text p { font-size: 12px; color: #64748b6d; }
+        .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: #475569; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .menu-item:hover { background: #f8fafc; color: #0f53ba6b; }
+        .menu-item.active { background: #eef4ff; color: #0f53ba6f; border-right: 3px solid #0F52BA; }
+        .submenu { display: none; overflow: hidden; background: #fafafa; }
+        .submenu-item { display: block; padding: 10px 20px 10px 36px; color: #64748b; font-size: 13px; text-decoration: none; }
+        .submenu-item:hover { color: #0F52BA; background: #f1f5f9; }
+        .submenu-item.active { color: #0F52BA; font-weight: 500; }
+        .menu-arrow { margin-left: auto; font-size: 12px; transition: 0.2s; }
+        .menu-arrow.open { transform: rotate(90deg); }
+        .ai-box { margin: 12px; padding: 14px; background: #eef4ff; border-radius: 12px; border: 1px solid #dbeafe; }
+        .main-content { margin-left: 190px; transition: 0.3s; }
+        .main-content.collapse { margin-left: 64px; }
+        .top-navbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .risk-red { background: #fee2e2; color: #dc2626; }
+        .risk-orange { background: #ffedd5; color: #ea580c; }
+        .risk-yellow { background: #fef9c3; color: #ca8a04; }
+        .risk-green { background: #dcfce7; color: #16a34a; }
+        .risk-blue {background:#e0edff;color:#0F52BA;}
+        .text-red { color: #dc2626a2; }
+        .text-orange { color: #ea5a0ca8; }
+        .text-blue {color:#0F52BA;}
+        .bg-government {background-color:#0F52BA;}
+        .bg-warning-dark {background-color:#d97706;}
+        .bg-red-dark {background-color:#b91c1c;}
+        .building-item { border-radius: 6px; padding: 8px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 500; transition: 0.2s; }
+        .building-item:hover { transform: scale(1.03); }
+        .modal-wrap { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-card { background: #fff; border-radius: 10px; width: 90%; max-width: 560px; max-height: 85vh; overflow-y: auto; }
+        .tag-special {border-radius:3px;padding:2px 6px;font-size:12px;}
+        .sticky-top-bg {position:sticky;top:0;background:#fff;z-index:10;}
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .blink-red {animation:blinkRed 1.2s infinite;}
+        @keyframes blinkRed{0%{opacity:1;}50%{opacity:0.5;}100%{opacity:1;}}
+
+        /* 侧边栏统一样式 */
+        .sidebar {
+            width: 190px;
+            background-color: #fff;
+            border-right: 1px solid #e5e7eb;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 16px 0;
+            overflow-y: auto;
+            z-index: 100;
+            transition: width 0.3s ease;
+        }
+        .sidebar.collapse { width: 64px; }
+        .sidebar.collapse .logo-text,
+        .sidebar.collapse .menu-item span,
+        .sidebar.collapse .menu-arrow,
+        .sidebar.collapse .ai-assistant { display: none; }
+        .sidebar.collapse .menu-item { justify-content: center; }
+
+        .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+        .logo-text h1 { font-size: 18px; font-weight: 600; color: #1f2937; }
+        .logo-text p { font-size: 12px; color: #6b7280; }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: #4b5563;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .menu-item:hover { background-color: #eff6ff; color: #3b82f6; }
+        .menu-item.active { background-color: #eff6ff; color: #3b82f6; border-right: 3px solid #3b82f6; }
+        .menu-item .badge {
+            margin-left: auto;
+            background-color: #ef4444;
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .submenu { display: none; overflow: hidden; }
+        .submenu-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px 10px 36px;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .submenu-item:hover { background-color: #f9fafb; color: #3b82f6; }
+        .submenu-item.active { color: #3b82f6; font-weight: 500; }
+
+        .menu-arrow { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+        .menu-arrow.open { transform: rotate(90deg); }
+
+        /* AI助手卡片 */
+        .ai-assistant {
+            position: sticky;
+            bottom: 16px;
+            margin: 12px;
+            background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border-radius: 14px;
+            padding: 16px;
+            border: 1px solid #bfdbfe;
+        }
+        .ai-assistant h3 {
+            font-size: 13.5px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: #1e40af;
+        }
+        .ai-assistant p {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+        .ai-assistant button {
+            width: 100%;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 9px;
+            font-size: 12.5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .ai-assistant button:hover { background-color: #1d4ed8; }
+
+        .main-content { margin-left: 190px; transition: margin 0.3s; }
+        .main-content.collapse { margin-left: 64px; }
+
+        /* 顶部导航 */
+        .top-nav {
+            background: #fff; border-bottom: 1px solid #e5e7eb; padding: 12px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-left { display: flex; align-items: center; gap: 20px; }
+        .nav-menu { display: flex; gap: 32px; }
+        .nav-menu a { text-decoration: none; color: #4b5563; font-size: 14px; font-weight: 500; padding: 6px 0; }
+        .nav-menu a.active { color: #3b83f685; border-bottom: 2px solid #3b83f683; }
+        .nav-right { display: flex; align-items: center; gap: 24px; }
+        .nav-notification { position: relative; font-size: 18px; color: #6b7280; }
+        .nav-notification .badge { position: absolute; top: -6px; right: -6px; background: #ef444486; color: #fff; font-size: 10px; padding: 2px 5px; border-radius: 10px; }
+        .nav-time { font-size: 14px; color: #4b5563; }
+        .nav-weather { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #6b72808a; }
+        .nav-user { display: flex; align-items: center; gap: 8px; cursor: pointer; position: relative; }
+        .nav-user img { width: 32px; height: 32px; border-radius: 50%; background: #e5e7eb; }
+        .user-dropdown { position: absolute; right: 0; top: 110%; width: 140px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 999; }
+        .user-dropdown-item { padding: 10px 12px; font-size: 14px; cursor: pointer; }
+        .user-dropdown-item:hover { background:#f3f4f6; }
+
+        .content-container { padding: 20px 24px; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-box { background: #fff; border-radius: 12px; padding: 24px; min-width: 480px; }
+        .point-tip { position: absolute; background: #fff; padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-size: 12px; display: none; z-index: 99; }
+        .tag-blue { background: #eff6ff; color: #3b83f697; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .tag-wait { background: #fff3e0; color: #ff99008d; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .tag-refuse { background: #ffebee; color: #f44333a5; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .alarm-red { animation: blink 1s infinite; }
+        @keyframes blink { 0%{opacity:1;} 50%{opacity:0.4;} 100%{opacity:1;} }
+        #mapBox { position: relative; background: #f8fafc; background-image: linear-gradient(rgba(220,220,220,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(220,220,220,0.1) 1px, transparent 1px); background-size: 20px 20px; user-select: none; }
+        .fence-item { position: absolute; z-index: 5; }
+    </style>
+</head>
+<body>
+<!-- 侧边栏导航 -->
+<div class="sidebar" id="sidebar">
+    <div class="logo">
+        <div class="logo-icon"><i class="fa fa-cloud"></i></div>
+        <div class="logo-text">
+            <h1>智护颐年</h1>
+            <p>智慧养老服务资源调度平台</p>
+        </div>
+    </div>
+    <div class="menu">
+        <a href="#" class="menu-item"><i class="fa fa-home"></i><span>首页总览</span></a>
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-user"></i><span>老人综合管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="index2.1.html" class="submenu-item">老人档案管理</a>
+            <a href="index2.2.html" class="submenu-item">失能等级评估</a>
+            <a href="index2.3.html" class="submenu-item">特殊老人管理</a>
+            <a href="index2.4.html" class="submenu-item">家属绑定管理</a>
+            <a href="#" class="submenu-item">老人台账统计</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heartbeat"></i><span>健康监测管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">实时健康数据</a>
+            <a href="#" class="submenu-item">实时预警中心</a>
+            <a href="#" class="submenu-item">慢病专项管理</a>
+            <a href="#" class="submenu-item">用药管理中心</a>
+            <a href="#" class="submenu-item">体检档案记录</a>
+            <a href="#" class="submenu-item">健康趋势分析</a>
+        </div>
+
+        <div class="menu-item active" onclick="toggleSubmenu(this)"><i class="fa fa-exclamation-triangle"></i><span>安全风险预警</span><i class="fa fa-angle-right menu-arrow open"></i></div>
+        <div class="submenu" style="display:block;">
+            <a href="#" class="submenu-item">实时告警中心</a>
+            <a href="#" class="submenu-item">跌倒/离床预警</a>
+            <a href="#" class="submenu-item">电子围栏管控</a>
+            <a href="#" class="submenu-item active">居家安防预警</a>
+            <a href="#" class="submenu-item">预警处置闭环</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-calendar"></i><span>服务资源调度</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">工单智能派单</a>
+            <a href="#" class="submenu-item">上门服务管理</a>
+            <a href="#" class="submenu-item">照护计划定制</a>
+            <a href="#" class="submenu-item">服务评价管理</a>
+            <a href="#" class="submenu-item">服务时长监管</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-users"></i><span>人员队伍管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">护理人员档案</a>
+            <a href="#" class="submenu-item">排班考勤管理</a>
+            <a href="#" class="submenu-item">资质证书管理</a>
+            <a href="#" class="submenu-item">绩效考核管理</a>
+            <a href="#" class="submenu-item">培训学习管理</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-microchip"></i><span>智能设备物联</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">设备统一接入</a>
+            <a href="#" class="submenu-item">穿戴设备监控</a>
+            <a href="#" class="submenu-item">居家智能硬件</a>
+            <a href="#" class="submenu-item">设备故障报修</a>
+            <a href="#" class="submenu-item">设备数据统计</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-robot"></i><span>AI智慧养老</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">AI健康研判</a>
+            <a href="#" class="submenu-item">AI智能派单</a>
+            <a href="#" class="submenu-item">反诈智能防护</a>
+            <a href="#" class="submenu-item">情绪AI识别</a>
+            <a href="#" class="submenu-item">智能营养配餐</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-money"></i><span>补贴财务中心</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">高龄补贴审核</a>
+            <a href="#" class="submenu-item">护理补贴发放</a>
+            <a href="#" class="submenu-item">服务费用管理</a>
+            <a href="#" class="submenu-item">财务对账报表</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-heart"></i><span>关怀活动管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">上门探访记录</a>
+            <a href="#" class="submenu-item">心理慰藉服务</a>
+            <a href="#" class="submenu-item">社区活动管理</a>
+            <a href="#" class="submenu-item">节日慰问关怀</a>
+        </div>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-bar-chart"></i><span>数据分析大屏</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">全域养老看板</a>
+            <a href="#" class="submenu-item">人口结构分析</a>
+            <a href="#" class="submenu-item">风险分布统计</a>
+            <a href="#" class="submenu-item">民政上报报表</a>
+        </div>
+
+        <a href="#" class="menu-item"><i class="fa fa-envelope"></i><span>消息通知中心</span><span class="badge">8</span></a>
+
+        <div class="menu-item" onclick="toggleSubmenu(this)"><i class="fa fa-cog"></i><span>系统权限管理</span><i class="fa fa-angle-right menu-arrow"></i></div>
+        <div class="submenu">
+            <a href="#" class="submenu-item">区域组织管理</a>
+            <a href="#" class="submenu-item">账号角色管理</a>
+            <a href="#" class="submenu-item">菜单权限配置</a>
+            <a href="#" class="submenu-item">系统字典配置</a>
+            <a href="#" class="submenu-item">操作日志查询</a>
+            <a href="#" class="submenu-item">数据备份恢复</a>
+        </div>
+    </div>
+
+    <div class="ai-assistant">
+        <h3>AI助手小智</h3>
+        <p>为您提供智能决策建议</p>
+        <button>立即咨询</button>
+        <i class="fa fa-robot" style="position:absolute; right:16px; bottom:16px; font-size:32px; color:#3b82f6;"></i>
+    </div>
+</div>
+
+<div class="main-content" id="mainContent">
+    <div class="top-nav">
+        <div class="nav-left">
+            <button id="collapseBtn" style="background:none; border:none; font-size:18px; color:#6b7280; margin-right:16px;"><i class="fa fa-bars"></i></button>
+            <div class="nav-menu">
+                <a href="index1.html">首页</a>
+                <a href="index4.1.html">安全风险预警</a>
+                <a href="index4.2.html">跌倒/离床预警</a>
+                <a href="index4.3.html">电子围栏监控</a>
+                <a href="index4.4.html" class="active">居家安防预警</a>
+                <a href="index4.5.html">预警处置闭环</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="nav-notification"><i class="fa fa-bell"></i><span class="badge">12</span></div>
+            <div class="nav-time" id="currentTime"></div>
+            <div class="nav-weather"><i class="fa fa-sun-o"></i><span>26℃ 多云</span></div>
+            <div class="nav-user" id="userBtn">
+                <img src="https://picsum.photos/id/1005/32/32">
+                <span>管理员 <i class="fa fa-angle-down"></i></span>
+                <div class="user-dropdown" id="userDrop">
+                    <div class="user-dropdown-item">修改密码</div>
+                    <div class="user-dropdown-item" onclick="loginOut()">退出登录</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="p-6">
+        <!-- 一、政务级多维度筛选区（新增：网格、责任人员、隐患状态） -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div>
+                    <label class="text-xs text-slate-500 block mb-1">所属街道</label>
+                    <select id="streetId" class="w-full border border-slate-300 rounded px-3 py-1.5 text-sm">
+                        <option value="">全部街道</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-500 block mb-1">管辖社区/网格</label>
+                    <select id="gridId" class="w-full border border-slate-300 rounded px-3 py-1.5 text-sm">
+                        <option value="">全部网格片区</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-500 block mb-1">隐患风险等级</label>
+                    <select id="riskLevel" class="w-full border border-slate-300 rounded px-3 py-1.5 text-sm">
+                        <option value="">全部等级</option>
+                        <option value="1">红色·紧急挂牌</option>
+                        <option value="2">橙色·重点督办</option>
+                        <option value="3">黄色·一般预警</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-500 block mb-1">整改销号状态</label>
+                    <select id="rectifyStatus" class="w-full border border-slate-300 rounded px-3 py-1.5 text-sm">
+                        <option value="">全部状态</option>
+                        <option value="0">未整改</option>
+                        <option value="1">整改中</option>
+                        <option value="2">待复查</option>
+                        <option value="3">已销号归档</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-500 block mb-1">责任网格员</label>
+                    <select id="workerId" class="w-full border border-slate-300 rounded px-3 py-1.5 text-sm">
+                        <option value="">全部责任人</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-500 block mb-1">统计周期</label>
+                    <div class="flex gap-2">
+                        <input type="date" id="startTime" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+                        <input type="date" id="endTime" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm">
+                    </div>
+                </div>
+            </div>
+           <div class="flex flex-wrap gap-3 mt-4">
+    <input type="text" id="keyWord" placeholder="隐患编号/住户信息/设备编号" class="border border-slate-300 rounded px-3 py-1.5 text-sm w-64">
+    <button onclick="getOverviewData()" class="bg-blue-100 text-blue-700 px-4 py-1.5 rounded text-sm"><i class="fa fa-search mr-1"></i>条件检索</button>
+    <button onclick="resetSearch()" class="bg-slate-100 text-slate-700 px-4 py-1.5 rounded text-sm">重置筛选</button>
+    <button onclick="batchUrge()" class="bg-red-100 text-red-700 px-3 py-1.5 rounded text-sm">批量挂牌督办</button>
+    <button onclick="exportRectifyRecord()" class="bg-amber-100 text-amber-700 px-3 py-1.5 rounded text-sm">隐患整改台账导出</button>
+    <button onclick="exportGovernmentReport()" class="bg-slate-100 text-slate-700 px-4 py-1.5 rounded text-sm">民政月度上报报表</button>
+    <button onclick="openLogTraceModal()" class="text-blue-600 bg-blue-50 px-3 py-1.5 border border-blue-200 rounded text-sm">履职日志溯源</button>
+</div>
+        </div>
+
+        <!-- 二、全域政务核心指标（全部替换为管理考核类数据） -->
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="text-xs text-slate-500">辖区安防设备总量</div>
+                <div class="text-2xl font-bold mt-2 text-slate-800" id="totalDevice">0</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="text-xs text-slate-500">设备合规在线率</div>
+                <div class="text-2xl font-bold mt-2 text-blue-800" id="onlineRate">0%</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="text-xs text-slate-500">本期隐患总数</div>
+                <div class="text-2xl font-bold mt-2 text-red-600" id="totalAlarm">0</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="text-xs text-slate-500">未整改高危隐患</div>
+                <div class="text-2xl font-bold mt-2 text-red-600 blink-red" id="dangerRectify">0</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="text-xs text-slate-500">隐患整改销号率</div>
+                <div class="text-2xl font-bold mt-2 text-green-600" id="rectifyRate">0%</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="text-xs text-slate-500">长期离线故障设备</div>
+                <div class="text-2xl font-bold mt-2 text-orange-600" id="blackDevice">0</div>
+            </div>
+        </div>
+
+        <!-- 三、核心管控区：楼栋风险热力 + 隐患整改督办工单 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="col-span-1 bg-white rounded-lg shadow-sm p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-medium text-blue-800">辖区楼栋风险热力分布图</h3>
+                    <span class="text-xs text-slate-400">点击下钻楼栋隐患</span>
+                </div>
+                <div class="grid grid-cols-3 gap-3" id="buildingHeatMap"></div>
+                <div class="mt-4 text-xs leading-6">
+                    <div class="flex justify-between mb-1">
+                        <span class="risk-red tag-special">红色-紧急挂牌隐患</span>
+                        <span class="risk-orange tag-special">橙色-重点督办隐患</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="risk-yellow tag-special">黄色-一般预警隐患</span>
+                        <span class="risk-green tag-special">绿色-合规无隐患</span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t text-xs text-slate-500">
+                    <i class="fa fa-info-circle text-blue-800"></i> 红色楼栋自动纳入街道重点督查清单
+                </div>
+            </div>
+
+            <div class="col-span-2 bg-white rounded-lg shadow-sm p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-medium text-blue-800">安防隐患整改督办工单清单</h3>
+                    <div class="flex gap-3 text-xs">
+                        <span class="risk-red tag-special">超时未整改追责</span>
+                        <span class="risk-blue tag-special">已纳入月度考核</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="sticky-top-bg">
+                            <tr class="bg-slate-50">
+                                <th class="px-2 py-2 text-left">隐患编号</th>
+                                <th class="px-2 py-2 text-left">网格/楼栋</th>
+                                <th class="px-2 py-2 text-left">隐患类型</th>
+                                <th class="px-2 py-2 text-center">风险等级</th>
+                                <th class="px-2 py-2 text-center">责任网格员</th>
+                                <th class="px-2 py-2 text-center">整改状态</th>
+                                <th class="px-2 py-2 text-center">限时期限</th>
+                                <th class="px-2 py-2 text-center">操作管控</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rectifyOrderList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 四、底部双模块：设备巡检运维台账 + 考核统计&民政报表 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-medium text-blue-800">安防设备全生命周期巡检台账</h3>
+                    <div class="flex gap-2">
+                        <button onclick="openInspectPlanModal()" class="text-xs text-blue-800">巡检计划管理</button>
+                        <button onclick="openBlackDeviceModal()" class="text-xs text-red-500">黑名单设备</button>
+                    </div>
+                </div>
+                <div class="h-[300px] overflow-y-auto">
+                    <table class="w-full text-xs">
+                        <thead class="sticky top-0 bg-white">
+                            <tr class="bg-slate-50">
+                                <th class="px-2 py-2 text-left">设备编码</th>
+                                <th class="px-2 py-2 text-left">安装点位</th>
+                                <th class="px-2 py-2 text-center">运行状态</th>
+                                <th class="px-2 py-2 text-center">片区责任人</th>
+                                <th class="px-2 py-2 text-center">最近巡检</th>
+                                <th class="px-2 py-2 text-center">运维操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deviceInspectList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-medium text-blue-800">隐患治理&人员考核统计分析</h3>
+                    <span class="text-xs text-slate-400">数据同步民政考核系统</span>
+                </div>
+                <div class="h-[300px]">
+                    <canvas id="governmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 五、新增：隐患整改销号归档记录 -->
+        <div class="bg-white rounded-lg shadow-sm p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-medium text-blue-800">历史隐患整改复查&销号归档台账</h3>
+                <button class="text-xs bg-government text-white px-3 py-1 rounded">归档台账总查询</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-2 py-2 text-left">归档编号</th>
+                            <th class="px-2 py-2 text-left">隐患简述</th>
+                            <th class="px-2 py-2 text-center">整改完成时间</th>
+                            <th class="px-2 py-2 text-center">社区复查人</th>
+                            <th class="px-2 py-2 text-center">民政终审状态</th>
+                            <th class="px-2 py-2 text-center">全流程溯源</th>
+                        </tr>
+                    </thead>
+                    <tbody id="archiveRectifyList"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 全部政务管理弹窗 -->
+<div class="modal-wrap" id="dangerUrgeModal">
+    <div class="modal-card p-5">
+        <div class="flex items-center gap-2 mb-4">
+            <i class="fa fa-exclamation-triangle text-red-600 text-xl blink-red"></i>
+            <h4 class="font-bold text-red-700">高危隐患挂牌督办</h4>
+        </div>
+        <div class="text-sm space-y-2 mb-4">
+            <p>隐患编号：<span id="urgeHid"></span></p>
+            <p>涉及网格楼栋：<span id="urgeBuild"></span></p>
+            <p>隐患问题描述：<span id="urgeDesc"></span></p>
+            <p>要求整改时限：<span class="text-red-600">24小时/48小时限时整改</span></p>
+            <p>督办级别：<span class="risk-red tag-special">区级挂牌督办</span></p>
+        </div>
+        <textarea id="urgeRemark" class="w-full border rounded p-2 text-sm mb-4" rows="2" placeholder="填写督办意见、整改要求"></textarea>
+        <div class="flex justify-end gap-3">
+            <button onclick="closeModal('dangerUrgeModal')" class="px-4 py-1.5 border rounded">取消</button>
+            <button onclick="submitUrge()" class="bg-red-dark text-white px-4 py-1.5 rounded">下发督办任务</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-wrap" id="rectifyReviewModal">
+    <div class="modal-card p-5">
+        <h4 class="font-bold text-blue-800 mb-4">隐患整改复查 & 销号审核</h4>
+        <div class="text-sm space-y-3 mb-4">
+            <p>隐患工单编号：<span id="reviewHid"></span></p>
+            <p>网格员整改说明：<span id="reviewContent"></span></p>
+            <p>现场整改佐证：<span class="text-green-600">已上传现场整改照片</span></p>
+        </div>
+        <textarea id="reviewOpinion" class="w-full border rounded p-2 text-sm mb-4" rows="3" placeholder="社区/街道复查意见"></textarea>
+        <div class="flex justify-end gap-3">
+            <button onclick="closeModal('rectifyReviewModal')" class="px-4 py-1.5 border rounded">关闭</button>
+            <button class="bg-warning-dark text-white px-3 py-1.5 rounded">驳回重新整改</button>
+            <button onclick="passReview()" class="bg-government text-white px-3 py-1.5 rounded">审核通过·准予销号</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-wrap" id="logTraceModal">
+    <div class="modal-card p-5">
+        <h4 class="font-bold mb-4">全域履职操作日志溯源查询</h4>
+        <div class="text-sm mb-3 text-slate-500">所有管理操作永久留痕，不可删除，作为安全追责依据</div>
+        <div class="h-[280px] border rounded p-3 overflow-y-auto text-xs" id="logTraceContent"></div>
+        <div class="flex justify-end mt-4">
+            <button onclick="closeModal('logTraceModal')" class="px-4 py-1.5 border rounded mr-2">关闭</button>
+            <button class="bg-slate-700 text-white px-3 py-1.5 rounded">导出追责日志</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-wrap" id="deviceInspectModal">
+    <div class="modal-card p-5">
+        <h4 class="font-bold mb-4">设备巡检登记 & 故障报修</h4>
+        <div class="text-sm space-y-2 mb-3" id="deviceInspectInfo"></div>
+        <textarea class="w-full border rounded p-2 text-sm mb-3" rows="2" placeholder="巡检情况、设备故障问题描述"></textarea>
+        <div class="flex justify-end gap-3">
+            <button onclick="closeModal('deviceInspectModal')" class="px-4 py-1.5 border rounded">关闭</button>
+            <button class="bg-government text-white px-4 py-1.5 rounded">提交巡检记录</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 后端统一接口地址
+const baseApi = "/api/admin/security";
+const api = {
+    overview: baseApi + "/overview",
+    buildingHeat: baseApi + "/building/heat",
+    rectifyList: baseApi + "/rectify/list",
+    deviceInspect: baseApi + "/device/inspect",
+    archiveList: baseApi + "/archive/list",
+    governmentStat: baseApi + "/government/stat",
+    submitUrge: baseApi + "/urge/submit",
+    reviewPass: baseApi + "/review/pass",
+    logTrace: baseApi + "/log/trace",
+    exportRectify: baseApi + "/export/rectify",
+    exportReport: baseApi + "/export/report"
+};
+
+let currentHid = "";
+let chartInstance = null;
+
+// 初始化
+window.onload = function(){
+    getAllGovernmentData();
+    setInterval(updateTime,1000);
+    updateTime();
+}
+
+function updateTime(){
+    document.getElementById("currentTime").innerText = new Date().toLocaleString();
+}
+
+document.getElementById("collapseBtn").onclick = function(){
+    document.getElementById("sidebar").classList.toggle("collapse");
+    document.getElementById("mainContent").classList.toggle("collapse");
+}
+function toggleSubmenu(el){
+    let sub = el.nextElementSibling;
+    sub.style.display = sub.style.display === "block" ? "none" : "block";
+    el.querySelector(".menu-arrow").classList.toggle("open");
+}
+function closeModal(id){
+    document.getElementById(id).style.display = "none";
+}
+
+// 全量数据加载
+function getAllGovernmentData(){
+    getOverviewData();
+    getBuildingHeatData();
+    getRectifyOrderList();
+    getDeviceInspectList();
+    getArchiveList();
+    getGovernmentChart();
+    getLogTraceData();
+}
+function resetSearch(){
+    document.querySelectorAll("select,input[type='date'],input#keyWord").forEach(el=>el.value="");
+    getAllGovernmentData();
+}
+
+// 1.核心指标
+function getOverviewData(){
+    axios.get(api.overview).then(res=>{
+        let d = res.data.data;
+        document.getElementById("totalDevice").innerText = d.totalDevice;
+        document.getElementById("onlineRate").innerText = d.onlineRate+"%";
+        document.getElementById("totalAlarm").innerText = d.totalAlarm;
+        document.getElementById("dangerRectify").innerText = d.dangerRectify;
+        document.getElementById("rectifyRate").innerText = d.rectifyRate+"%";
+        document.getElementById("blackDevice").innerText = d.blackDevice;
+    }).catch(()=>mockOverview())
+}
+
+// 2.楼栋热力
+function getBuildingHeatData(){
+    axios.get(api.buildingHeat).then(res=>renderBuilding(res.data.data)).catch(()=>mockBuilding())
+}
+
+// 3.隐患整改工单
+function getRectifyOrderList(){
+    axios.get(api.rectifyList).then(res=>renderRectifyTable(res.data.data)).catch(()=>mockRectifyList())
+}
+
+// 4.设备巡检台账
+function getDeviceInspectList(){
+    axios.get(api.deviceInspect).then(res=>renderDeviceInspect(res.data.data)).catch(()=>mockDeviceInspect())
+}
+
+// 5.销号归档
+function getArchiveList(){
+    axios.get(api.archiveList).then(res=>renderArchiveList(res.data.data)).catch(()=>mockArchiveList())
+}
+
+// 6.考核统计图表
+function getGovernmentChart(){
+    axios.get(api.governmentStat).then(res=>initGovChart(res.data.data)).catch(()=>mockGovChart())
+}
+
+// 7.履职日志
+function getLogTraceData(){
+    axios.get(api.logTrace).then(res=>{
+        document.getElementById("logTraceContent").innerHTML = res.data.data.html;
+    }).catch(()=>mockLogTrace())
+}
+
+// 政务操作
+function batchUrge(){alert("批量挂牌督办任务已下发，纳入社区月度考核");getRectifyOrderList();}
+function exportRectifyRecord(){window.open(api.exportRectify);}
+function exportGovernmentReport(){window.open(api.exportReport);}
+function openLogTraceModal(){document.getElementById("logTraceModal").style.display="flex";}
+function openInspectPlanModal(){alert("可新增/编辑季度、月度设备强制巡检计划");}
+function openBlackDeviceModal(){alert("长期离线、反复故障设备黑名单管理，强制运维整改");}
+
+// 督办&销号
+function openUrgeModal(item){
+    currentHid = item.hid;
+    document.getElementById("urgeHid").innerText = item.hid;
+    document.getElementById("urgeBuild").innerText = item.buildName;
+    document.getElementById("urgeDesc").innerText = item.desc;
+    document.getElementById("dangerUrgeModal").style.display = "flex";
+}
+function submitUrge(){alert("督办下发成功，超时未整改将进行履职追责");closeModal("dangerUrgeModal");}
+function openReviewModal(item){
+    currentHid = item.hid;
+    document.getElementById("reviewHid").innerText = item.hid;
+    document.getElementById("reviewContent").innerText = item.rectifyRemark||"无";
+    document.getElementById("rectifyReviewModal").style.display = "flex";
+}
+function passReview(){alert("审核通过，隐患正式销号归档");closeModal("rectifyReviewModal");getAllGovernmentData();}
+
+// 渲染模拟数据
+function mockOverview(){
+    document.getElementById("totalDevice").innerText = 168;
+    document.getElementById("onlineRate").innerText = "93.7%";
+    document.getElementById("totalAlarm").innerText = 32;
+    document.getElementById("dangerRectify").innerText = 6;
+    document.getElementById("rectifyRate").innerText = "81.3%";
+    document.getElementById("blackDevice").innerText = 11;
+}
+function mockBuilding(){
+    let list = [
+        {name:"1号楼",risk:1},{name:"2号楼",risk:2},{name:"3号楼",risk:3},
+        {name:"4号楼",risk:4},{name:"5号楼",risk:1},{name:"6号楼",risk:4}
+    ];
+    let html = "";
+    list.forEach(v=>{
+        let cls = v.risk===1?"risk-red":v.risk===2?"risk-orange":v.risk===3?"risk-yellow":"risk-green";
+        html += `<div class="building-item ${cls}">${v.name}</div>`;
+    })
+    document.getElementById("buildingHeatMap").innerHTML = html;
+}
+function mockRectifyList(){
+    let html = `
+    <tr class="border-b">
+        <td class="px-2 py-2">YH-AQ-2026042801</td>
+        <td class="px-2 py-2">幸福第一网格-1号楼</td>
+        <td class="px-2 py-2">燃气浓度超标隐患</td>
+        <td class="px-2 py-2 text-center"><span class="risk-red tag-special">红色紧急</span></td>
+        <td class="px-2 py-2 text-center">李网格员</td>
+        <td class="px-2 py-2 text-center text-red-600">未整改</td>
+        <td class="px-2 py-2 text-center blink-red">超期12小时</td>
+        <td class="px-2 py-2 text-center">
+            <button onclick="openUrgeModal({hid:'YH-AQ-2026042801',buildName:'幸福第一网格-1号楼',desc:'厨房燃气泄漏重大安全隐患'})" class="text-red-600 text-xs">挂牌督办</button>
+        </td>
+    </tr>
+    <tr class="border-b">
+        <td class="px-2 py-2">YH-AQ-2026042802</td>
+        <td class="px-2 py-2">和谐第二网格-2号楼</td>
+        <td class="px-2 py-2">门窗异常闯入预警</td>
+        <td class="px-2 py-2 text-center"><span class="risk-orange tag-special">重点督办</span></td>
+        <td class="px-2 py-2 text-center">王运维</td>
+        <td class="px-2 py-2 text-center text-orange-600">整改中</td>
+        <td class="px-2 py-2 text-center">剩余18小时</td>
+        <td class="px-2 py-2 text-center"><button class="text-blue-800 text-xs">进度跟踪</button></td>
+    </tr>
+    <tr class="border-b">
+        <td class="px-2 py-2">YH-AQ-2026042803</td>
+        <td class="px-2 py-2">安居第三网格-3号楼</td>
+        <td class="px-2 py-2">卫生间漏水隐患</td>
+        <td class="px-2 py-2 text-center"><span class="risk-yellow tag-special">一般预警</span></td>
+        <td class="px-2 py-2 text-center">张网格员</td>
+        <td class="px-2 py-2 text-center text-blue-800">待复查</td>
+        <td class="px-2 py-2 text-center">正常期限内</td>
+        <td class="px-2 py-2 text-center">
+            <button onclick="openReviewModal({hid:'YH-AQ-2026042803',rectifyRemark:'已完成管道检修、防水处理'})" class="text-green-600 text-xs">复查销号</button>
+        </td>
+    </tr>
+    `;
+    document.getElementById("rectifyOrderList").innerHTML = html;
+}
+function mockDeviceInspect(){
+    let html = `
+    <tr class="border-b">
+        <td class="px-2 py-2">GAS-00162</td>
+        <td class="px-2 py-2">1号楼302老人户厨房</td>
+        <td class="px-2 py-2 text-center text-red-600">离线故障</td>
+        <td class="px-2 py-2 text-center">李网格员</td>
+        <td class="px-2 py-2 text-center">2026-04-15</td>
+        <td class="px-2 py-2 text-center"><button class="text-xs text-red-500">故障报修</button></td>
+    </tr>
+    <tr class="border-b">
+        <td class="px-2 py-2">SMK-00091</td>
+        <td class="px-2 py-2">2号楼101公共区域</td>
+        <td class="px-2 py-2 text-center text-green-600">正常在线</td>
+        <td class="px-2 py-2 text-center">王运维</td>
+        <td class="px-2 py-2 text-center">2026-04-26</td>
+        <td class="px-2 py-2 text-center"><button class="text-xs text-blue-800">巡检登记</button></td>
+    </tr>
+    `;
+    document.getElementById("deviceInspectList").innerHTML = html;
+}
+function mockArchiveList(){
+    let html = `
+    <tr class="border-b">
+        <td class="px-2 py-2">DA-2026042501</td>
+        <td class="px-2 py-2">卧室门窗长时间异常开启</td>
+        <td class="px-2 py-2 text-center">2026-04-25</td>
+        <td class="px-2 py-2 text-center">刘社区干部</td>
+        <td class="px-2 py-2 text-center"><span class="risk-green tag-special">民政终审通过</span></td>
+        <td class="px-2 py-2 text-center"><button class="text-xs text-slate-500">流程溯源</button></td>
+    </tr>
+    `;
+    document.getElementById("archiveRectifyList").innerHTML = html;
+}
+function mockGovChart(){
+    let data = {
+        labels:["燃气隐患","烟雾预警","门窗异常","漏水隐患","设备故障"],
+        danger:[6,3,4,2,11],
+        finish:[4,3,3,2,5]
+    };
+    initGovChart(data);
+}
+function initGovChart(data){
+    if(chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(document.getElementById("governmentChart"),{
+        type:"bar",
+        data:{
+            labels:data.labels,
+            datasets:[
+                {label:"未整改隐患/故障",data:data.danger,backgroundColor:#b91c1c},
+                {label:"已治理完成",data:data.finish,backgroundColor:#0F52BA}
+            ]
+        },
+        options:{responsive:true,maintainAspectRatio:false}
+    })
+}
+function mockLogTrace(){
+    document.getElementById("logTraceContent").innerHTML = `
+    <div class="mb-2 pb-2 border-b">【2026-04-28 10:22】 管理员 - 下发高危隐患挂牌督办</div>
+    <div class="mb-2 pb-2 border-b">【2026-04-28 09:15】 网格员李某 - 提交隐患整改报告</div>
+    <div class="mb-2 pb-2 border-b">【2026-04-27 16:30】 社区干部 - 审核隐患销号申请</div>
+    <div class="mb-2 pb-2 border-b">【2026-04-27 14:10】 管理员 - 导出月度民政上报台账</div>
+    `;
+}
+
+// 无用占位渲染函数
+function renderBuilding(){}
+function renderRectifyTable(){}
+function renderDeviceInspect(){}
+function renderArchiveList(){}
+</script>
+</body>
+</html>
