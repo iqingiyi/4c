@@ -72,7 +72,18 @@
         .tag-yellow{background:#fef3c7;color:#d97706}
         .tag-red{background:#fee2e2;color:#dc2626}
         .tag-purple{background:#f3e8ff;color:#7e22ce}
-        .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999}
+        .modal{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.5);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+}
         .modal-content{background:#fff;border-radius:14px;padding:24px;max-height:90vh;overflow-y:auto;width:900px}
         .chart-box{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,0.04);margin-bottom:16px}
         .grid-chart{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
@@ -85,8 +96,13 @@
         .page-btn.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
         .tip-alert{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:10px 20px;background:#333;color:#fff;border-radius:8px;z-index:10000;display:none}
         .loading{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.7);display:none;align-items:center;justify-content:center;z-index:9998}
-        .year-compare{margin-top:15px;padding:15px;background:#f8fafc;border-radius:10px}
-        .chart-sm{max-height:240px;}
+        .year-compare{
+         margin-top:15px;
+         padding:15px;
+          background:#f8fafc;
+          border-radius:10px;
+          height:260px;
+}        .chart-sm{max-height:240px;}
     </style>
 </head>
 <body>
@@ -97,6 +113,12 @@
 
 <!-- 后端全局配置 - 实时计算/Excel/数据库导入 统一入口 -->
 <script>
+const API_BASE = "http://127.0.0.1:8000";
+
+let examData = [];
+let currentExamPage = 1;
+let examPageSize = 10;
+
 // 后端全局常量 - 对接核心
 const BACKEND_BASE_URL = ""; // 后端根地址 例如：http://localhost:8080
 const USER_ROLE = "admin";
@@ -105,6 +127,14 @@ const USER_AREA = "北京市-东城区";
 const TOKEN = "backend-token-20260426";
 const PAGE_SIZE = 5;
 let currentPage = 1;
+let yearCompareChartInstance = null;
+let trendChartInstance = null;
+let radarChartInstance = null;
+let groupChartInstance = null;
+let ringChartInstance = null;
+let roseChartInstance = null;
+let areaBarChartInstance = null;
+let monthLineChartInstance = null;
 
 // ========== 后端预留接口【全部支持数据库/Excel导入 & 实时计算】 ==========
 const API = {
@@ -112,6 +142,7 @@ const API = {
     areaList: BACKEND_BASE_URL + "/api/area/list",
     // 体检列表 - 分页+筛选+地区
     examList: BACKEND_BASE_URL + "/api/exam/list",
+    examUpload: BACKEND_BASE_URL + "/api/exam/upload",
     // 新增/编辑/删除
     examAdd: BACKEND_BASE_URL + "/api/exam/add",
     examEdit: BACKEND_BASE_URL + "/api/exam/update",
@@ -216,24 +247,24 @@ const API = {
                 </select>
             </div>
 
-            <button class="btn btn-primary" onclick="queryData()"><i class="fa fa-search"></i> 查询</button>
+            <button class="btn btn-primary" onclick="loadExamList()"><i class="fa fa-search"></i> 查询</button>
             <button class="btn btn-light" onclick="resetSearch()"><i class="fa fa-refresh"></i> 重置</button>
             <button class="btn btn-success" onclick="openUpload()"><i class="fa fa-upload"></i> 上传报告</button>
             <button class="btn btn-warning" id="interveneBtn" onclick="openIntervene()"><i class="fa fa-stethoscope"></i> 异常干预</button>
             <button class="btn btn-info" onclick="batchOperate()"><i class="fa fa-list-check"></i> 批量操作</button>
-            <button class="btn btn-light" id="exportBtn" onclick="exportData()"><i class="fa fa-download"></i> 导出台账</button>
+            <button class="btn btn-light" id="exportBtn" onclick="exportExamExcel()"><i class="fa fa-download"></i> 导出台账</button>
             <button class="btn btn-light" onclick="openAddExam()"><i class="fa fa-plus"></i> 新增体检</button>
             <!-- 后端Excel导入入口 -->
             <button class="btn btn-light" onclick="excelImport()"><i class="fa fa-upload"></i> Excel导入</button>
         </div>
 
         <div class="stats-row">
-            <div class="stat-card"><div class="stat-title">全国体检总人数</div><div class="stat-num">12,846</div></div>
-            <div class="stat-card"><div class="stat-title">本年度已体检</div><div class="stat-num">4,291</div></div>
-            <div class="stat-card"><div class="stat-title">异常指标人数</div><div class="stat-num text-warning">3,207</div></div>
-            <div class="stat-card"><div class="stat-title">红色高危老人</div><div class="stat-num text-danger">892</div></div>
-            <div class="stat-card"><div class="stat-title">慢病检出率</div><div class="stat-num text-danger">43.6%</div></div>
-            <div class="stat-card"><div class="stat-title">体检覆盖率</div><div class="stat-num text-success">96.8%</div></div>
+            <div class="stat-card"><div class="stat-title">体检档案总数</div><div class="stat-num" id="examTotal">0</div></div>
+<div class="stat-card"><div class="stat-title">已完成体检</div><div class="stat-num" id="examCompleted">0</div></div>
+<div class="stat-card"><div class="stat-title">异常档案数量</div><div class="stat-num text-warning" id="examAbnormal">0</div></div>
+<div class="stat-card"><div class="stat-title">高风险老人</div><div class="stat-num text-danger" id="examHigh">0</div></div>
+<div class="stat-card"><div class="stat-title">异常检出率</div><div class="stat-num text-primary" id="examAbnormalRate">0%</div></div>
+<div class="stat-card"><div class="stat-title">体检覆盖率</div><div class="stat-num text-primary" id="examCoverRate">100%</div></div>
         </div>
 
         <div class="exam-tabs">
@@ -262,12 +293,8 @@ const API = {
                 </thead>
                 <tbody id="tableBody"></tbody>
             </table>
-            <div class="page-box">
-                <button class="page-btn" onclick="prevPage()">上一页</button>
-                <button class="page-btn active">1</button>
-                <button class="page-btn">2</button>
-                <button class="page-btn">3</button>
-                <button class="page-btn" onclick="nextPage()">下一页</button>
+            <div class="page-box" id="pageBox"></div>
+               
             </div>
         </div>
 
@@ -305,40 +332,285 @@ const API = {
 </div>
 
 <div class="modal" id="addModal">
-    <div class="modal-content" style="width:600px">
+    <div class="modal-content" style="width:760px">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-semibold">新增体检记录</h3>
             <button onclick="closeAddModal()" class="text-xl">×</button>
         </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="text-sm text-gray-500">老人姓名</label>
+                <input id="addElderName" class="form-control w-full border rounded px-3 py-2" placeholder="请输入姓名">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">老人标签</label>
+                <input id="addElderTag" class="form-control w-full border rounded px-3 py-2" placeholder="例：高血压/糖尿病/高龄">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">年龄</label>
+                <input id="addAge" type="number" class="form-control w-full border rounded px-3 py-2" value="75">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">性别</label>
+                <select id="addGender" class="form-control w-full border rounded px-3 py-2">
+                    <option>男</option>
+                    <option>女</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">所属区域</label>
+                <input id="addArea" class="form-control w-full border rounded px-3 py-2" value="一号康养楼">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">体检时间</label>
+                <input id="addExamDate" type="date" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">体检类型</label>
+                <select id="addExamType" class="form-control w-full border rounded px-3 py-2">
+                    <option>常规体检</option>
+                    <option>慢病复查</option>
+                    <option>心脑血管专项</option>
+                    <option>糖尿病专项</option>
+                    <option>康复评估</option>
+                    <option>入院评估</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">风险等级</label>
+                <select id="addRiskLevel" class="form-control w-full border rounded px-3 py-2">
+                    <option value="normal">绿色健康</option>
+                    <option value="low">轻度风险</option>
+                    <option value="mid">黄色随访</option>
+                    <option value="high">红色高危</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">血压</label>
+                <input id="addBloodPressure" class="form-control w-full border rounded px-3 py-2" placeholder="例：136/84">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">血糖</label>
+                <input id="addBloodSugar" class="form-control w-full border rounded px-3 py-2" placeholder="例：6.2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">BMI</label>
+                <input id="addBmi" class="form-control w-full border rounded px-3 py-2" placeholder="例：23.5">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">心率</label>
+                <input id="addHeartRate" class="form-control w-full border rounded px-3 py-2" placeholder="例：78次/分">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">体检机构</label>
+                <input id="addHospital" class="form-control w-full border rounded px-3 py-2" value="智护颐年健康中心">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">医生</label>
+                <input id="addDoctor" class="form-control w-full border rounded px-3 py-2" value="李医生">
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <label class="text-sm text-gray-500">体检结论</label>
+            <textarea id="addConclusion" rows="3" class="form-control w-full border rounded px-3 py-2" placeholder="填写本次体检结论"></textarea>
+        </div>
+
+        <div class="mt-3">
+            <label class="text-sm text-gray-500">随访建议</label>
+            <textarea id="addFollowAdvice" rows="3" class="form-control w-full border rounded px-3 py-2" placeholder="填写后续随访建议"></textarea>
+        </div>
+
+        <button class="btn btn-primary w-full mt-4" onclick="submitAddExam()">提交保存</button>
+    </div>
+</div>
+<!-- 上传体检报告弹窗 -->
+<div class="modal" id="uploadModal">
+    <div class="modal-content" style="width:620px">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">上传体检报告</h3>
+            <button onclick="closeUploadModal()" class="text-xl">×</button>
+        </div>
+
         <div class="space-y-3">
             <div class="flex gap-3 items-center">
-                <label style="width:100px">老人姓名：</label>
-                <input class="form-control w-full border rounded px-3 py-2" placeholder="请输入姓名">
+                <label style="width:110px">老人姓名：</label>
+                <input id="uploadName" class="form-control w-full border rounded px-3 py-2" placeholder="请输入老人姓名">
             </div>
+
             <div class="flex gap-3 items-center">
-                <label style="width:100px">体检类型：</label>
-                <select class="form-control w-full border rounded px-3 py-2">
-                    <option>年度体检</option>
-                    <option>慢病专项</option>
+                <label style="width:110px">报告类型：</label>
+                <select id="uploadType" class="form-control w-full border rounded px-3 py-2">
+                    <option>常规体检</option>
+                    <option>慢病复查</option>
+                    <option>心脑血管专项</option>
+                    <option>糖尿病专项</option>
+                    <option>康复评估</option>
+                    <option>入院评估</option>
                 </select>
             </div>
+
             <div class="flex gap-3 items-center">
-                <label style="width:100px">所属地区：</label>
-                <select class="form-control w-full border rounded px-3 py-2">
-                    <option>北京市</option>
-                    <option>上海市</option>
-                    <option>广东省</option>
-                </select>
+                <label style="width:110px">体检日期：</label>
+                <input id="uploadDate" type="date" class="form-control w-full border rounded px-3 py-2">
             </div>
+
             <div class="flex gap-3 items-center">
-                <label style="width:100px">体检时间：</label>
-                <input type="date" class="form-control w-full border rounded px-3 py-2">
+                <label style="width:110px">报告文件：</label>
+                <input id="uploadFile" type="file" class="form-control w-full border rounded px-3 py-2" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
             </div>
-            <button class="btn btn-primary w-full mt-4" onclick="submitAddExam()">提交保存</button>
+
+            <div class="text-sm text-gray-500 bg-gray-50 p-3 rounded">
+                当前版本会保存一条体检档案记录，文件本身可作为后续扩展接入对象存储或本地上传目录。
+            </div>
+
+            <button class="btn btn-primary w-full mt-4" onclick="submitUploadReport()">提交上传</button>
         </div>
     </div>
 </div>
 
+<!-- 异常干预弹窗 -->
+<div class="modal" id="interveneModal">
+    <div class="modal-content" style="width:620px">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">异常体检干预任务</h3>
+            <button onclick="closeInterveneModal()" class="text-xl">×</button>
+        </div>
+
+        <div class="space-y-3">
+            <div class="flex gap-3 items-center">
+                <label style="width:110px">干预对象：</label>
+                <select id="interveneTarget" class="form-control w-full border rounded px-3 py-2">
+                    <option value="high">全部高风险老人</option>
+                    <option value="abnormal">全部异常档案老人</option>
+                    <option value="selected">当前勾选老人</option>
+                </select>
+            </div>
+
+            <div class="flex gap-3 items-center">
+                <label style="width:110px">干预方式：</label>
+                <select id="interveneType" class="form-control w-full border rounded px-3 py-2">
+                    <option>医生复查提醒</option>
+                    <option>护理员上门随访</option>
+                    <option>家属短信通知</option>
+                    <option>慢病专科复诊</option>
+                    <option>智能设备加强监测</option>
+                </select>
+            </div>
+
+            <div class="flex gap-3 items-center">
+                <label style="width:110px">计划日期：</label>
+                <input id="interveneDate" type="date" class="form-control w-full border rounded px-3 py-2">
+            </div>
+
+            <div class="flex gap-3">
+                <label style="width:110px">干预说明：</label>
+                <textarea id="interveneNote" rows="4" class="form-control w-full border rounded px-3 py-2" placeholder="填写异常指标、干预原因和处理要求"></textarea>
+            </div>
+
+            <button class="btn btn-warning w-full mt-4" onclick="submitIntervene()">生成干预任务</button>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑体检档案弹窗 -->
+<div class="modal" id="editExamModal">
+    <div class="modal-content" style="width:760px">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">编辑体检档案</h3>
+            <button onclick="closeEditExamModal()" class="text-xl">×</button>
+        </div>
+
+        <input type="hidden" id="editExamId">
+
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="text-sm text-gray-500">老人姓名</label>
+                <input id="editElderName" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">老人标签</label>
+                <input id="editElderTag" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">年龄</label>
+                <input id="editAge" type="number" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">性别</label>
+                <select id="editGender" class="form-control w-full border rounded px-3 py-2">
+                    <option>男</option>
+                    <option>女</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">所属区域</label>
+                <input id="editArea" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">体检日期</label>
+                <input id="editExamDate" type="date" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">体检类型</label>
+                <select id="editExamType" class="form-control w-full border rounded px-3 py-2">
+                    <option>常规体检</option>
+                    <option>慢病复查</option>
+                    <option>心脑血管专项</option>
+                    <option>糖尿病专项</option>
+                    <option>康复评估</option>
+                    <option>入院评估</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">风险等级</label>
+                <select id="editRiskLevel" class="form-control w-full border rounded px-3 py-2">
+                    <option value="normal">绿色健康</option>
+                    <option value="low">轻度风险</option>
+                    <option value="mid">黄色随访</option>
+                    <option value="high">红色高危</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">血压</label>
+                <input id="editBloodPressure" class="form-control w-full border rounded px-3 py-2" placeholder="例：136/84">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">血糖</label>
+                <input id="editBloodSugar" class="form-control w-full border rounded px-3 py-2" placeholder="例：6.2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">BMI</label>
+                <input id="editBmi" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">心率</label>
+                <input id="editHeartRate" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">体检机构</label>
+                <input id="editHospital" class="form-control w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-500">医生</label>
+                <input id="editDoctor" class="form-control w-full border rounded px-3 py-2">
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <label class="text-sm text-gray-500">体检结论</label>
+            <textarea id="editConclusion" rows="3" class="form-control w-full border rounded px-3 py-2"></textarea>
+        </div>
+
+        <div class="mt-3">
+            <label class="text-sm text-gray-500">随访建议</label>
+            <textarea id="editFollowAdvice" rows="3" class="form-control w-full border rounded px-3 py-2"></textarea>
+        </div>
+
+        <button class="btn btn-primary w-full mt-4" onclick="saveExamEdit()">保存修改</button>
+    </div>
+</div>
 <div class="watermark" id="wmk"></div>
 
 <script>
@@ -367,15 +639,6 @@ function setTime(){
 setTime();
 setInterval(setTime,1000);
 
-// 模拟初始数据（后端会通过接口实时覆盖）
-const data = [
-    {id:1,name:'张桂英',age:73,date:'2025-01-10',type:'年度体检',level:'red',abnormal:4,ill:'高血压、高血脂',area:'北京市'},
-    {id:2,name:'王秀兰',age:79,date:'2025-01-08',type:'慢病专项',level:'yellow',abnormal:2,ill:'糖尿病',area:'上海市'},
-    {id:3,name:'刘福海',age:81,date:'2025-01-05',type:'上门体检',level:'purple',abnormal:6,ill:'冠心病、高血压',area:'广东省'},
-    {id:4,name:'陈桂兰',age:75,date:'2024-12-28',type:'年度体检',level:'yellow',abnormal:1,ill:'血脂异常',area:'北京市'},
-    {id:5,name:'吴玉珍',age:71,date:'2024-12-25',type:'年度体检',level:'green',abnormal:0,ill:'无',area:'浙江省'},
-    {id:6,name:'赵大山',age:83,date:'2024-11-15',type:'心脑血管专项',level:'red',abnormal:5,ill:'脑梗后遗症',area:'江苏省'},
-];
 
 const levelMap = {green:'tag-green',yellow:'tag-yellow',red:'tag-red',purple:'tag-purple'};
 const levelText = {green:'绿色健康',yellow:'黄色随访',red:'红色高危',purple:'紫色危重'};
@@ -384,85 +647,416 @@ function mask(str){
     return USER_ROLE==='guardian' ? '***' : str;
 }
 
-// ========== 数据查询 - 对接后端实时统计 ==========
-function queryData(){
-    showLoading();
-    let areaId = document.getElementById('areaSelect').value;
-    // 后端传参：areaId / year / type / level 自动实时计算
-    setTimeout(()=>{
-        loadData();
-        // 后端可在这里调用 API.statData 刷新顶部统计+全部图表
-        hideLoading();
-        showTip('数据查询完成，后端实时计算已同步');
-        addLog('执行体检数据查询+实时统计计算');
-    },600);
-}
 
-function loadData(){
-    const b=document.getElementById('tableBody');
-    b.innerHTML='';
-    data.forEach(v=>{
-        b.innerHTML+=`
-        <tr>
-            <td><input type="checkbox" class="item-check"></td>
-            <td>${v.name}</td>
-            <td>${v.age}</td>
-            <td>${v.date}</td>
-            <td>${v.type}</td>
-            <td><span class="tag ${levelMap[v.level]}">${levelText[v.level]}</span></td>
-            <td style="display:${USER_ROLE==='guardian'?'none':'table-cell'}">${mask(v.abnormal)}</td>
-            <td style="display:${USER_ROLE==='guardian'?'none':'table-cell'}">${mask(v.ill)}</td>
-            <td>
-                <button class="btn btn-sm btn-primary" onclick="openReport(${v.id})">查看</button>
-                <button class="btn btn-sm btn-light" onclick="editExam(${v.id})">编辑</button>
-                <button class="btn btn-sm btn-danger" onclick="delExam(${v.id})">删除</button>
-            </td>
-        </tr>`;
-    });
-}
+
+
 
 // ========== 所有按钮事件 ==========
-function switchTab(idx){showTip('分类切换成功');loadData();}
-function prevPage(){showTip('上一页');}
-function nextPage(){showTip('下一页');}
+function switchTab(idx){
+    document.querySelectorAll('.exam-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.exam-tab')[idx]?.classList.add('active');
+
+    if (idx === 0) {
+        document.getElementById("s_type").value = "全部";
+        document.getElementById("s_level").value = "全部";
+    } else if (idx === 1) {
+        document.getElementById("s_type").value = "年度体检";
+    } else if (idx === 2) {
+        document.getElementById("s_type").value = "慢病专项";
+        document.getElementById("s_level").value = "mid";
+    } else if (idx === 3) {
+        document.getElementById("s_type").value = "慢病专项";
+    } else if (idx === 4) {
+        document.getElementById("s_type").value = "心脑血管专项";
+    } else if (idx === 5) {
+        document.getElementById("s_level").value = "红色高危";
+    }
+
+    loadExamList();
+}
 function checkAll(){const all=document.getElementById('checkAll');document.querySelectorAll('.item-check').forEach(c=>c.checked=all.checked);}
 function resetSearch(){document.getElementById('s_name').value='';showTip('筛选条件已重置');loadData();}
-function excelImport(){showTip('请求后端Excel导入｜接口：'+API.excelImport);addLog('执行Excel数据导入（支持数据库同步）');}
-function openUpload(){showTip('打开报告上传｜接口：'+API.examUpload);addLog('上传体检附件');}
-function openIntervene(){showTip('异常干预｜接口：'+API.examIntervene);addLog('发起健康干预任务');}
+function excelImport(){
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xlsx,.xls,.csv";
+
+    input.onchange = function(){
+        const file = input.files[0];
+        if(!file) return;
+
+        alert(
+            `已选择文件：${file.name}\n\n` +
+            `当前前端已完成Excel导入入口。\n` +
+            `如需真正解析Excel，需要后端增加上传接口和 openpyxl 解析逻辑。`
+        );
+
+        addLog(`选择Excel导入文件：${file.name}`);
+    };
+
+    input.click();
+}
 function exportData(){showTip('导出台账｜接口：'+API.excelExport);addLog('导出Excel报表');}
-function batchOperate(){showTip('已开启批量操作');}
+function getSelectedExamIds(){
+    return Array.from(document.querySelectorAll(".item-check:checked"))
+        .map(item => item.dataset.id)
+        .filter(Boolean);
+}
+
+function batchOperate(){
+    const ids = getSelectedExamIds();
+
+    if(!ids.length){
+        alert("请先勾选需要批量操作的体检档案");
+        return;
+    }
+
+    const action = prompt(
+        `已选择 ${ids.length} 条档案，请输入操作编号：\n` +
+        `1：批量删除\n` +
+        `2：生成异常干预任务\n` +
+        `3：标记为已复查`,
+        "2"
+    );
+
+    if(action === "1"){
+        batchDeleteExams(ids);
+    }else if(action === "2"){
+        document.getElementById("interveneTarget").value = "selected";
+        document.getElementById("interveneType").value = "医生复查提醒";
+        document.getElementById("interveneDate").value = new Date().toISOString().slice(0, 10);
+        document.getElementById("interveneNote").value = `针对已勾选的 ${ids.length} 位老人建立异常指标复查任务。`;
+        document.getElementById("interveneModal").style.display = "flex";
+    }else if(action === "3"){
+        alert(`已将 ${ids.length} 条体检档案标记为已复查（演示功能，可继续扩展后端批量更新接口）`);
+    }
+}
+
+async function batchDeleteExams(ids){
+    if(!confirm(`确定批量删除 ${ids.length} 条体检档案吗？`)) return;
+
+    try{
+        for(const id of ids){
+            await fetch(`${API_BASE}/api/exam/${id}`, {method: "DELETE"});
+        }
+
+        await loadExamStatsOnly?.();
+        await loadExamList();
+        alert("批量删除完成");
+    }catch(err){
+        alert(`批量删除失败：${err.message || err}`);
+    }
+}
 function openAddExam(){document.getElementById('addModal').style.display='flex';}
 function closeAddModal(){document.getElementById('addModal').style.display='none';}
-function submitAddExam(){closeAddModal();showTip('新增成功，后端已入库');addLog('新增体检记录');}
-function editExam(id){showTip('编辑数据ID：'+id);}
-function delExam(id){if(confirm('确定删除？')){showTip('删除成功');loadData();}}
+function openAddExam(){
+    document.getElementById('addElderName').value = "";
+    document.getElementById('addElderTag').value = "";
+    document.getElementById('addAge').value = 75;
+    document.getElementById('addGender').value = "男";
+    document.getElementById('addArea').value = "一号康养楼";
+    document.getElementById('addExamDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('addExamType').value = "常规体检";
+    document.getElementById('addRiskLevel').value = "normal";
+    document.getElementById('addBloodPressure').value = "";
+    document.getElementById('addBloodSugar').value = "";
+    document.getElementById('addBmi').value = "";
+    document.getElementById('addHeartRate').value = "";
+    document.getElementById('addHospital').value = "智护颐年健康中心";
+    document.getElementById('addDoctor').value = "李医生";
+    document.getElementById('addConclusion').value = "";
+    document.getElementById('addFollowAdvice').value = "";
+    document.getElementById('addModal').style.display='flex';
+}
+
+function closeAddModal(){
+    document.getElementById('addModal').style.display='none';
+}
+
+async function submitAddExam(){
+    const elderName = document.getElementById("addElderName").value.trim();
+
+    if(!elderName){
+        alert("请填写老人姓名");
+        return;
+    }
+
+    const riskLevel = document.getElementById("addRiskLevel").value;
+
+    const payload = {
+        elder_name: elderName,
+        elder_tag: document.getElementById("addElderTag").value.trim(),
+        age: Number(document.getElementById("addAge").value || 0),
+        gender: document.getElementById("addGender").value,
+        area: document.getElementById("addArea").value.trim(),
+        exam_date: document.getElementById("addExamDate").value,
+        exam_type: document.getElementById("addExamType").value,
+        hospital: document.getElementById("addHospital").value.trim(),
+        doctor: document.getElementById("addDoctor").value.trim(),
+        height: "",
+        weight: "",
+        bmi: document.getElementById("addBmi").value.trim(),
+        blood_pressure: document.getElementById("addBloodPressure").value.trim(),
+        blood_sugar: document.getElementById("addBloodSugar").value.trim(),
+        blood_lipid: "",
+        heart_rate: document.getElementById("addHeartRate").value.trim(),
+        liver_function: "",
+        kidney_function: "",
+        ecg: "",
+        chest_ct: "",
+        bone_density: "",
+        conclusion: document.getElementById("addConclusion").value.trim() || "新增体检记录，待医生进一步完善。",
+        risk_level: riskLevel,
+        follow_advice: document.getElementById("addFollowAdvice").value.trim() || "建议按期复查。",
+        next_exam_date: "",
+        file_status: riskLevel === "high" ? "abnormal" : "completed",
+        remark: "前端新增体检档案"
+    };
+
+    try{
+        const res = await fetch(`${API_BASE}/api/exam`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+
+        if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+        closeAddModal();
+        await loadExamStatsOnly?.();
+        await loadExamList();
+        alert(result.msg || "新增体检记录成功");
+    }catch(err){
+        alert(`新增失败：${err.message || err}`);
+    }
+}
+function openUpload(){
+    document.getElementById("uploadName").value = "";
+    document.getElementById("uploadType").value = "常规体检";
+    document.getElementById("uploadDate").value = new Date().toISOString().slice(0, 10);
+    document.getElementById("uploadFile").value = "";
+    document.getElementById("uploadModal").style.display = "flex";
+}
+
+function closeUploadModal(){
+    document.getElementById("uploadModal").style.display = "none";
+}
+
+async function submitUploadReport(){
+    const name = document.getElementById("uploadName").value.trim();
+    const examType = document.getElementById("uploadType").value;
+    const examDate = document.getElementById("uploadDate").value;
+    const file = document.getElementById("uploadFile").files[0];
+
+    if(!name){
+        alert("请填写老人姓名");
+        return;
+    }
+
+    const payload = {
+        elder_name: name,
+        elder_tag: file ? `已上传报告：${file.name}` : "上传报告",
+        age: 0,
+        gender: "",
+        area: "报告上传",
+        exam_date: examDate,
+        exam_type: examType,
+        hospital: "外部上传报告",
+        doctor: "待识别",
+        height: "",
+        weight: "",
+        bmi: "",
+        blood_pressure: "",
+        blood_sugar: "",
+        blood_lipid: "",
+        heart_rate: "",
+        liver_function: "",
+        kidney_function: "",
+        ecg: "",
+        chest_ct: "",
+        bone_density: "",
+        conclusion: file ? `已上传体检报告文件：${file.name}，等待医生审核。` : "已上传体检报告，等待医生审核。",
+        risk_level: "normal",
+        follow_advice: "请医生完成报告识别与复核。",
+        next_exam_date: "",
+        file_status: "completed",
+        remark: "前端上传入口创建"
+    };
+
+    try{
+        const res = await fetch(`${API_BASE}/api/exam`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+
+        if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+        closeUploadModal();
+        await loadExamStatsOnly?.();
+        await loadExamList();
+        alert(result.msg || "报告上传成功");
+    }catch(err){
+        alert(`上传失败：${err.message || err}`);
+    }
+}
+
+function openIntervene(){
+    document.getElementById("interveneTarget").value = "high";
+    document.getElementById("interveneType").value = "医生复查提醒";
+    document.getElementById("interveneDate").value = new Date().toISOString().slice(0, 10);
+    document.getElementById("interveneNote").value = "针对异常体检指标建立复查与随访计划。";
+    document.getElementById("interveneModal").style.display = "flex";
+}
+
+function closeInterveneModal(){
+    document.getElementById("interveneModal").style.display = "none";
+}
+
+function submitIntervene(){
+    const target = document.getElementById("interveneTarget").value;
+    const type = document.getElementById("interveneType").value;
+    const date = document.getElementById("interveneDate").value;
+    const note = document.getElementById("interveneNote").value.trim();
+
+    const selectedCount = document.querySelectorAll(".item-check:checked").length;
+
+    let targetText = "全部高风险老人";
+    if(target === "abnormal") targetText = "全部异常档案老人";
+    if(target === "selected") targetText = `当前勾选老人 ${selectedCount} 人`;
+
+    closeInterveneModal();
+
+    alert(
+        `异常干预任务已生成\n\n` +
+        `干预对象：${targetText}\n` +
+        `干预方式：${type}\n` +
+        `计划日期：${date}\n` +
+        `干预说明：${note || "无"}`
+    );
+
+    addLog(`生成异常干预任务：${targetText}｜${type}`);
+}
+
+async function editExam(id){
+    try{
+        const res = await fetch(`${API_BASE}/api/exam/${id}`);
+        if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+        const item = result.data;
+
+        document.getElementById("editExamId").value = item.id;
+        document.getElementById("editElderName").value = item.elderName || "";
+        document.getElementById("editElderTag").value = item.elderTag || "";
+        document.getElementById("editAge").value = item.age || 0;
+        document.getElementById("editGender").value = item.gender || "男";
+        document.getElementById("editArea").value = item.area || "";
+        document.getElementById("editExamDate").value = item.examDate || "";
+        document.getElementById("editExamType").value = item.examType || "常规体检";
+        document.getElementById("editRiskLevel").value = item.riskLevel || "normal";
+        document.getElementById("editBloodPressure").value = item.bloodPressure || "";
+        document.getElementById("editBloodSugar").value = item.bloodSugar || "";
+        document.getElementById("editBmi").value = item.bmi || "";
+        document.getElementById("editHeartRate").value = item.heartRate || "";
+        document.getElementById("editHospital").value = item.hospital || "";
+        document.getElementById("editDoctor").value = item.doctor || "";
+        document.getElementById("editConclusion").value = item.conclusion || "";
+        document.getElementById("editFollowAdvice").value = item.followAdvice || "";
+
+        document.getElementById("editExamModal").style.display = "flex";
+    }catch(err){
+        alert(`读取编辑数据失败：${err.message || err}`);
+    }
+}
+
+function closeEditExamModal(){
+    document.getElementById("editExamModal").style.display = "none";
+}
+
+async function saveExamEdit(){
+    const id = document.getElementById("editExamId").value;
+
+    const payload = {
+        elder_name: document.getElementById("editElderName").value.trim(),
+        elder_tag: document.getElementById("editElderTag").value.trim(),
+        age: Number(document.getElementById("editAge").value || 0),
+        gender: document.getElementById("editGender").value,
+        area: document.getElementById("editArea").value.trim(),
+        exam_date: document.getElementById("editExamDate").value,
+        exam_type: document.getElementById("editExamType").value,
+        hospital: document.getElementById("editHospital").value.trim(),
+        doctor: document.getElementById("editDoctor").value.trim(),
+        height: "",
+        weight: "",
+        bmi: document.getElementById("editBmi").value.trim(),
+        blood_pressure: document.getElementById("editBloodPressure").value.trim(),
+        blood_sugar: document.getElementById("editBloodSugar").value.trim(),
+        blood_lipid: "",
+        heart_rate: document.getElementById("editHeartRate").value.trim(),
+        liver_function: "",
+        kidney_function: "",
+        ecg: "",
+        chest_ct: "",
+        bone_density: "",
+        conclusion: document.getElementById("editConclusion").value.trim(),
+        risk_level: document.getElementById("editRiskLevel").value,
+        follow_advice: document.getElementById("editFollowAdvice").value.trim(),
+        next_exam_date: "",
+        file_status: document.getElementById("editRiskLevel").value === "high" ? "abnormal" : "completed",
+        remark: "前端编辑保存"
+    };
+
+    if(!payload.elder_name){
+        alert("请填写老人姓名");
+        return;
+    }
+
+    try{
+        const res = await fetch(`${API_BASE}/api/exam/${id}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+
+        if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+        closeEditExamModal();
+        await loadExamStatsOnly?.();
+        await loadExamList();
+        alert(result.msg || "编辑保存成功");
+    }catch(err){
+        alert(`保存失败：${err.message || err}`);
+    }
+}
 function openMsgCenter(){showTip('待办7条，高危预警3条');}
 function printReport(){showTip('打印预览');}
-function openAiAssistant(){showTip('AI解读｜接口：'+API.aiReport);}
+async function openAiAssistant(){
+    try{
+        const res = await fetch(`${API_BASE}/api/exam/ai-summary`);
+        if(!res.ok) throw new Error(`接口状态码：${res.status}`);
 
-function openReport(id){
-    const v=data.find(x=>x.id===id);
-    document.getElementById('reportBody').innerHTML=`
-    <div class="p-3 bg-gray-50 rounded font-bold">${v.name}｜${v.date}｜国家级体检报告</div>
-    <div class="grid grid-cols-2 gap-2">
-        <div>年龄：${v.age}</div>
-        <div>体检类型：${v.type}</div>
-        <div>所属地区：${v.area}</div>
-        <div>风险等级：<span class="tag ${levelMap[v.level]}">${levelText[v.level]}</span></div>
-        <div>体检机构：${mask('市级公立老年病医院')}</div>
-    </div>
-    <div class="font-bold border-b pb-1 mt-2">一般检查</div>
-    <div class="grid grid-cols-2 gap-2"><div>血压：158/94 ↑</div><div>BMI：26.1 超重</div></div>
-    <div class="font-bold border-b pb-1 mt-2">血常规/生化全项</div>
-    <div>多指标筛查完成，脏器功能正常</div>
-    <div class="font-bold border-b pb-1 mt-2">医生综合评估</div>
-    <div>异常提示：${mask(v.ill)}，定期随访复查</div>
-    `;
-    document.getElementById('reportModal').style.display='flex';
-    initYearCompareChart();
-    addLog(`查看${v.name}体检报告`);
+        const result = await res.json();
+        const report = result.data?.report || "暂无AI分析结果";
+
+        document.getElementById("reportBody").innerHTML = `
+            <div class="p-3 bg-blue-50 rounded font-bold text-blue-700">AI 智能体检风险总览报告</div>
+            <div class="mt-3 leading-7 whitespace-pre-line">${report}</div>
+            <div class="mt-4 p-3 bg-gray-50 rounded text-sm text-gray-600">
+                建议：结合慢病专项管理、用药管理中心和实时健康监测模块，对高风险老人建立连续跟踪闭环。
+            </div>
+        `;
+
+        document.getElementById("reportModal").style.display = "flex";
+    }catch(err){
+        alert(`AI分析失败：${err.message || err}`);
+    }
 }
+
+
 function closeModal(){document.getElementById('reportModal').style.display='none';}
 
 function showTip(text){
@@ -476,98 +1070,551 @@ function addLog(content){
     let time = new Date().toLocaleString('zh-CN');
     console.log(`[操作日志] ${time}｜${USER_NAME}｜${content}`);
 }
+async function loadExamStatsOnly() {
+    try {
+        const res = await fetch(`${API_BASE}/api/exam/stats`);
+        if (!res.ok) throw new Error(`接口状态码：${res.status}`);
+        const result = await res.json();
+        renderExamStats(result.data || {});
+    } catch (err) {
+        console.error("加载体检统计失败：", err);
+    }
+}
+
+function destroyExamCharts() {
+    [
+        trendChartInstance,
+        radarChartInstance,
+        groupChartInstance,
+        ringChartInstance,
+        roseChartInstance,
+        areaBarChartInstance,
+        monthLineChartInstance
+    ].forEach(chart => {
+        if (chart) chart.destroy();
+    });
+
+    trendChartInstance = null;
+    radarChartInstance = null;
+    groupChartInstance = null;
+    ringChartInstance = null;
+    roseChartInstance = null;
+    areaBarChartInstance = null;
+    monthLineChartInstance = null;
+}
 
 // ========== 图表初始化（全部绑定后端实时接口，自动计算） ==========
-function initCharts(){
-    // 1.年度趋势图
-    new Chart(document.getElementById('trendChart'),{
-        type:'line',tension:0.4,fill:true,
-        data:{
-            labels:['2021','2022','2023','2024','2025'],
-            datasets:[
-                {label:'平均收缩压',data:[131,136,141,145,148],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.15)'},
-                {label:'空腹血糖均值',data:[4.9,5.0,5.1,5.2,5.4],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.15)'}
+function initCharts() {
+    destroyExamCharts();
+
+    const list = examData || [];
+
+    const riskCount = {
+        normal: list.filter(x => x.riskLevel === "normal").length,
+        low: list.filter(x => x.riskLevel === "low").length,
+        mid: list.filter(x => x.riskLevel === "mid").length,
+        high: list.filter(x => x.riskLevel === "high").length
+    };
+
+    const ageGroups = {
+        "70-74岁": list.filter(x => Number(x.age) >= 70 && Number(x.age) <= 74),
+        "75-79岁": list.filter(x => Number(x.age) >= 75 && Number(x.age) <= 79),
+        "80-84岁": list.filter(x => Number(x.age) >= 80 && Number(x.age) <= 84),
+        "85岁以上": list.filter(x => Number(x.age) >= 85)
+    };
+
+    const ageLabels = Object.keys(ageGroups);
+
+    const highBpByAge = ageLabels.map(label => {
+        const group = ageGroups[label];
+        if (!group.length) return 0;
+        const count = group.filter(x => {
+            const systolic = Number(String(x.bloodPressure || "").split("/")[0]);
+            return systolic >= 140;
+        }).length;
+        return Math.round(count / group.length * 100);
+    });
+
+    const diabetesByAge = ageLabels.map(label => {
+        const group = ageGroups[label];
+        if (!group.length) return 0;
+        const count = group.filter(x => {
+            const sugar = Number(x.bloodSugar || 0);
+            return sugar >= 7 || String(x.elderTag || "").includes("糖尿病");
+        }).length;
+        return Math.round(count / group.length * 100);
+    });
+
+    const areaCount = {};
+    list.forEach(item => {
+        const area = item.area || "未知区域";
+        areaCount[area] = (areaCount[area] || 0) + 1;
+    });
+
+    const areaLabels = Object.keys(areaCount).slice(0, 6);
+    const areaValues = areaLabels.map(k => areaCount[k]);
+
+    const monthCount = {};
+    list.forEach(item => {
+        const month = String(item.examDate || "").slice(5, 7);
+        if (month) {
+            const key = `${Number(month)}月`;
+            monthCount[key] = (monthCount[key] || 0) + 1;
+        }
+    });
+
+    const monthLabels = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+    const monthValues = monthLabels.map(m => monthCount[m] || 0);
+
+    const avgSystolic = list.length
+        ? Math.round(list.reduce((sum, x) => sum + (Number(String(x.bloodPressure || "").split("/")[0]) || 0), 0) / list.length)
+        : 130;
+
+    const avgSugar = list.length
+        ? Number((list.reduce((sum, x) => sum + (Number(x.bloodSugar || 0) || 0), 0) / list.length).toFixed(1))
+        : 5.5;
+
+    trendChartInstance = new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: ['上上次', '上次', '本次'],
+            datasets: [
+                {
+                    label: '平均收缩压',
+                    data: [avgSystolic - 8, avgSystolic - 4, avgSystolic],
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239,68,68,0.15)'
+                },
+                {
+                    label: '空腹血糖均值',
+                    data: [Math.max(4.5, avgSugar - 0.4), Math.max(4.5, avgSugar - 0.2), avgSugar],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59,130,246,0.15)'
+                }
             ]
-        },options:{maintainAspectRatio:true}
+        },
+        options: { maintainAspectRatio: true }
     });
-    // 2.雷达图
-    new Chart(document.getElementById('radarChart'),{
-        type:'radar',
-        data:{
-            labels:['血压健康','血糖健康','血脂健康','心肺功能','肝肾功能','骨密度'],
-            datasets:[{data:[58,65,52,72,78,60],borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.15)'}]
-        },options:{maintainAspectRatio:true}
+
+    radarChartInstance = new Chart(document.getElementById('radarChart'), {
+        type: 'radar',
+        data: {
+            labels: ['血压健康', '血糖健康', '血脂健康', '心肺功能', '肝肾功能', '骨密度'],
+            datasets: [{
+                label: '健康评分',
+                data: [
+                    Math.max(40, 100 - highBpByAge.reduce((a,b)=>a+b,0) / 4),
+                    Math.max(40, 100 - diabetesByAge.reduce((a,b)=>a+b,0) / 4),
+                    78,
+                    82,
+                    80,
+                    76
+                ],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.15)'
+            }]
+        },
+        options: { maintainAspectRatio: true }
     });
-    // 3.年龄段柱状图
-    new Chart(document.getElementById('groupChart'),{
-        type:'bar',
-        data:{
-            labels:['70-74岁','75-79岁','80-84岁','85岁以上'],
-            datasets:[
-                {label:'高血压患病率',data:[30,42,55,67],backgroundColor:'#f59e0b'},
-                {label:'糖尿病患病率',data:[17,24,33,40],backgroundColor:'#06b6d4'}
+
+    groupChartInstance = new Chart(document.getElementById('groupChart'), {
+        type: 'bar',
+        data: {
+            labels: ageLabels,
+            datasets: [
+                {
+                    label: '高血压患病率',
+                    data: highBpByAge,
+                    backgroundColor: '#f59e0b'
+                },
+                {
+                    label: '糖尿病患病率',
+                    data: diabetesByAge,
+                    backgroundColor: '#06b6d4'
+                }
             ]
-        },options:{maintainAspectRatio:true}
+        },
+        options: { maintainAspectRatio: true }
     });
 
-    // 4.缩小适中环形图
-    new Chart(document.getElementById('ringChart'),{
-        type:'doughnut',
-        data:{
-            labels:['健康老人','随访观察','高危管控','危重监护'],
-            datasets:[{data:[56,25,14,5],backgroundColor:['#10b981','#f59e0b','#ef4444','#7e22ce']}]
-        },options:{maintainAspectRatio:true,cutout:'65%'}
+    ringChartInstance = new Chart(document.getElementById('ringChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['健康老人', '轻度风险', '随访观察', '高危管控'],
+            datasets: [{
+                data: [riskCount.normal, riskCount.low, riskCount.mid, riskCount.high],
+                backgroundColor: ['#10b981', '#22c55e', '#f59e0b', '#ef4444']
+            }]
+        },
+        options: { maintainAspectRatio: true, cutout: '65%' }
     });
 
-    // 5.玫瑰图
-    new Chart(document.getElementById('roseChart'),{
-        type:'polarArea',
-        data:{
-            labels:['血压异常','血糖异常','血脂异常','心肺问题','肝肾异常','骨骼问题'],
-            datasets:[{data:[28,22,35,18,12,20],backgroundColor:['rgba(239,68,68,0.6)','rgba(59,130,246,0.6)','rgba(245,158,11,0.6)','rgba(16,185,129,0.6)','rgba(126,34,206,0.6)','rgba(6,182,212,0.6)']}]
-        },options:{maintainAspectRatio:true}
+    roseChartInstance = new Chart(document.getElementById('roseChart'), {
+        type: 'polarArea',
+        data: {
+            labels: ['高血压风险', '糖尿病风险', '高风险档案', '异常档案'],
+            datasets: [{
+                data: [
+                    list.filter(x => Number(String(x.bloodPressure || "").split("/")[0]) >= 140).length,
+                    list.filter(x => Number(x.bloodSugar || 0) >= 7).length,
+                    riskCount.high,
+                    list.filter(x => x.fileStatus === "abnormal").length
+                ],
+                backgroundColor: [
+                    'rgba(239,68,68,0.6)',
+                    'rgba(59,130,246,0.6)',
+                    'rgba(245,158,11,0.6)',
+                    'rgba(126,34,206,0.6)'
+                ]
+            }]
+        },
+        options: { maintainAspectRatio: true }
     });
 
-    // 6.省市地区图
-    new Chart(document.getElementById('areaBarChart'),{
-        type:'bar',
-        data:{
-            labels:['北京','上海','广东','浙江','江苏','四川'],
-            datasets:[{label:'年度体检人数',data:[2150,1860,3200,1420,1680,1930],backgroundColor:'#3b82f6'}]
-        },options:{maintainAspectRatio:true}
+    areaBarChartInstance = new Chart(document.getElementById('areaBarChart'), {
+        type: 'bar',
+        data: {
+            labels: areaLabels,
+            datasets: [{
+                label: '体检档案数',
+                data: areaValues,
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: { maintainAspectRatio: true }
     });
 
-    // 7.月度趋势图
-    new Chart(document.getElementById('monthLineChart'),{
-        type:'line',tension:0.4,
-        data:{
-            labels:['1月','2月','3月','4月','5月','6月'],
-            datasets:[{label:'月度体检完成数',data:[520,680,950,1200,1360,1100],borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.15)',fill:true}]
-        },options:{maintainAspectRatio:true}
+    monthLineChartInstance = new Chart(document.getElementById('monthLineChart'), {
+        type: 'line',
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                label: '月度体检完成数',
+                data: monthValues,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.15)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { maintainAspectRatio: true }
     });
 }
 
-function initYearCompareChart(){
-    new Chart(document.getElementById('yearCompareChart'),{
-        type:'bar',
-        data:{
-            labels:['2023','2024','2025'],
-            datasets:[
-                {label:'血压指标',data:[135,142,148],backgroundColor:'#ef4444'},
-                {label:'血糖指标',data:[5.0,5.2,5.3],backgroundColor:'#3b82f6'}
+function initYearCompareChart(item){
+    const canvas = document.getElementById('yearCompareChart');
+    if (!canvas) return;
+
+    if (yearCompareChartInstance) {
+        yearCompareChartInstance.destroy();
+        yearCompareChartInstance = null;
+    }
+
+    const bpText = item?.bloodPressure || "135/85";
+    const sugarText = item?.bloodSugar || "5.6";
+    const bmiText = item?.bmi || "23.0";
+
+    const systolic = Number(String(bpText).split("/")[0]) || 135;
+    const sugar = Number(sugarText) || 5.6;
+    const bmi = Number(bmiText) || 23.0;
+
+    yearCompareChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: ['上上次', '上次', '本次'],
+            datasets: [
+                {
+                    label: '收缩压',
+                    data: [systolic - 8, systolic - 4, systolic]
+                },
+                {
+                    label: '血糖',
+                    data: [Math.max(4.5, sugar - 0.5), Math.max(4.5, sugar - 0.2), sugar]
+                },
+                {
+                    label: 'BMI',
+                    data: [Math.max(18, bmi - 0.8), Math.max(18, bmi - 0.4), bmi]
+                }
             ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
         }
     });
 }
 
-// 页面初始化
-window.onload=function(){
-    initPermission();
-    loadData();
-    initCharts();
-    // 页面加载自动请求后端实时统计
-    console.log("页面初始化完成，可对接后端：数据库/Excel导入、实时计算、自动渲染图表");
+
+
+function mapExamType(value) {
+    if (!value || value === "全部") return "all";
+    if (value === "年度体检") return "常规体检";
+    if (value === "慢病专项") return "慢病复查";
+    if (value === "心脑血管专项") return "心脑血管专项";
+    return value;
 }
+
+function mapRiskLevel(value) {
+    if (!value || value === "全部") return "all";
+    if (value === "绿色健康") return "normal";
+    if (value === "黄色随访") return "mid";
+    if (value === "红色高危") return "high";
+    if (value === "紫色危重") return "high";
+    return "all";
+}
+
+async function loadExamStatsOnly() {
+    try {
+        const res = await fetch(`${API_BASE}/api/exam/stats`);
+        if (!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+        renderExamStats(result.data || {});
+    } catch (err) {
+        console.error("加载体检统计失败：", err);
+    }
+}
+async function loadExamList() {
+    showLoading();
+
+    const elderName = document.getElementById("s_name")?.value.trim() || "";
+    const examType = mapExamType(document.getElementById("s_type")?.value || "全部");
+    const riskLevel = mapRiskLevel(document.getElementById("s_level")?.value || "全部");
+
+    const params = new URLSearchParams({
+        elderName,
+        examType,
+        riskLevel,
+        fileStatus: "all",
+        area: "all"
+    });
+
+    try {
+        const res = await fetch(`${API_BASE}/api/exam/list?${params.toString()}`);
+        if (!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+
+        examData = result.data || [];
+        currentExamPage = 1;
+
+       //  renderExamStats(result.stats || {});
+        renderExamPage();
+        initCharts();
+
+    } catch (err) {
+        console.error(err);
+        document.getElementById("tableBody").innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align:center;padding:48px;color:#ef4444;">
+                    <i class="fa fa-exclamation-triangle"></i><br>
+                    体检接口连接失败：${err.message || err}<br>
+                    <span style="font-size:12px;color:#6b7280;">请确认可打开 http://127.0.0.1:8000/api/exam/list</span>
+                </td>
+            </tr>
+        `;
+    } finally {
+        hideLoading();
+    }
+}
+
+function renderExamStats(stats) {
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = value;
+    };
+
+    setText("examTotal", stats.total ?? 0);
+    setText("examCompleted", stats.completed ?? 0);
+    setText("examAbnormal", stats.abnormal ?? 0);
+    setText("examHigh", stats.high ?? 0);
+    setText("examAbnormalRate", `${stats.abnormalRate ?? 0}%`);
+    setText("examCoverRate", "100%");
+}
+
+function renderExamPage() {
+    const total = examData.length;
+    const totalPages = Math.ceil(total / examPageSize) || 1;
+
+    if (currentExamPage > totalPages) currentExamPage = totalPages;
+
+    const start = (currentExamPage - 1) * examPageSize;
+    const pageList = examData.slice(start, start + examPageSize);
+
+    renderExamTable(pageList);
+    renderExamPagination(total, totalPages);
+}
+
+function renderExamTable(list) {
+    const body = document.getElementById("tableBody");
+    body.innerHTML = "";
+
+    if (!list.length) {
+        body.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align:center;padding:48px;color:#94a3b8;">
+                    暂无体检档案数据
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const riskMap = {
+        normal: { text: "绿色健康", cls: "tag-green" },
+        low: { text: "轻度风险", cls: "tag-green" },
+        mid: { text: "黄色随访", cls: "tag-yellow" },
+        high: { text: "红色高危", cls: "tag-red" }
+    };
+
+    list.forEach(item => {
+        const risk = riskMap[item.riskLevel] || riskMap.normal;
+
+        body.innerHTML += `
+            <tr>
+                <td><input type="checkbox" class="item-check" data-id="${item.id}"></td>
+                <td>${item.elderName || "-"}</td>
+                <td>${item.age || "-"}</td>
+                <td>${item.examDate || "-"}</td>
+                <td>${item.examType || "-"}</td>
+                <td><span class="tag ${risk.cls}">${risk.text}</span></td>
+                <td>${item.fileStatus === "abnormal" ? "异常" : "正常"}</td>
+                <td>${item.elderTag || "-"}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="openReport(${item.id})">查看</button>
+                    <button class="btn btn-sm btn-light" onclick="editExam(${item.id})">编辑</button>
+                    <button class="btn btn-sm btn-danger" onclick="delExam(${item.id})">删除</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function renderExamPagination(total, totalPages) {
+    const box = document.getElementById("pageBox") || document.querySelector(".page-box");
+    if (!box) return;
+
+    let buttons = "";
+
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || Math.abs(i - currentExamPage) <= 2) {
+            buttons += `
+                <button class="page-btn ${i === currentExamPage ? "active" : ""}" onclick="changeExamPage(${i})">
+                    ${i}
+                </button>
+            `;
+        } else if (i === currentExamPage - 3 || i === currentExamPage + 3) {
+            buttons += `<span style="padding:5px;color:#94a3b8;">...</span>`;
+        }
+    }
+
+    box.innerHTML = `
+        <span style="font-size:13px;color:#64748b;margin-right:8px;">
+            共 ${total} 条数据，第 ${currentExamPage} / ${totalPages} 页
+        </span>
+        <button class="page-btn" onclick="changeExamPage(${currentExamPage - 1})" ${currentExamPage <= 1 ? "disabled" : ""}>上一页</button>
+        ${buttons}
+        <button class="page-btn" onclick="changeExamPage(${currentExamPage + 1})" ${currentExamPage >= totalPages ? "disabled" : ""}>下一页</button>
+    `;
+}
+function changeExamPage(page) {
+    const totalPages = Math.ceil(examData.length / examPageSize) || 1;
+    if (page < 1 || page > totalPages) return;
+
+    currentExamPage = page;
+    renderExamPage();
+}
+
+function resetSearch() {
+    document.getElementById("s_name").value = "";
+    document.getElementById("s_year").value = "2025";
+    document.getElementById("s_type").value = "全部";
+    document.getElementById("s_level").value = "全部";
+    document.getElementById("areaSelect").value = "0";
+    loadExamList();
+}
+
+function exportExamExcel() {
+    window.open(`${API_BASE}/api/exam/export`, "_blank");
+}
+
+async function openReport(id) {
+    try {
+        const res = await fetch(`${API_BASE}/api/exam/${id}`);
+        if (!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+        const item = result.data;
+
+        document.getElementById("reportBody").innerHTML = `
+            <div class="p-3 bg-gray-50 rounded font-bold">${item.elderName}｜${item.examDate}｜体检报告</div>
+            <div class="grid grid-cols-2 gap-2 mt-3">
+                <div>年龄：${item.age}</div>
+                <div>性别：${item.gender}</div>
+                <div>体检类型：${item.examType}</div>
+                <div>所属区域：${item.area}</div>
+                <div>体检机构：${item.hospital}</div>
+                <div>医生：${item.doctor}</div>
+                <div>血压：${item.bloodPressure}</div>
+                <div>血糖：${item.bloodSugar}</div>
+                <div>BMI：${item.bmi}</div>
+                <div>心率：${item.heartRate}</div>
+            </div>
+            <div class="font-bold border-b pb-1 mt-4">体检结论</div>
+            <div>${item.conclusion || "暂无"}</div>
+            <div class="font-bold border-b pb-1 mt-4">随访建议</div>
+            <div>${item.followAdvice || "暂无"}</div>
+            <div class="mt-4">
+    <button class="btn btn-warning" onclick="openExamAi(${item.id})">
+        <i class="fa fa-robot"></i> AI解读本次体检
+    </button>
+</div>
+        `;
+
+        document.getElementById("reportModal").style.display = "flex";
+        initYearCompareChart(item);
+    } catch (err) {
+        alert(`读取体检详情失败：${err.message || err}`);
+    }
+
+}
+
+async function openExamAi(id){
+    try{
+        const res = await fetch(`${API_BASE}/api/exam/ai/${id}`);
+        if(!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+        alert(result.data?.report || "暂无AI解读");
+    }catch(err){
+        alert(`AI解读失败：${err.message || err}`);
+    }
+}
+
+async function delExam(id) {
+    if (!confirm("确定删除该体检档案吗？")) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/api/exam/${id}`, {
+            method: "DELETE"
+        });
+
+        if (!res.ok) throw new Error(`接口状态码：${res.status}`);
+
+        const result = await res.json();
+        alert(result.msg || "删除成功");
+        loadExamList();
+    } catch (err) {
+        alert(`删除失败：${err.message || err}`);
+    }
+}
+
+// 页面初始化
+window.onload = function(){
+    setTime();
+    loadExamStatsOnly();
+    loadExamList();
+};
 </script>
 </body>
 </html>

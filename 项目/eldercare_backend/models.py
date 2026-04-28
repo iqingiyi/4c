@@ -103,3 +103,59 @@ class MedicineLibrary(Base):
     usage = Column(String(200), default="")
     contraindication = Column(Text, default="")
     remark = Column(Text, default="")
+
+class PhysicalExamRecord(Base):
+        __tablename__ = "physical_exam_records"
+
+        id = Column(Integer, primary_key=True, index=True)
+
+        elder_name = Column(String(50), nullable=False)
+        elder_tag = Column(String(100), default="")
+        age = Column(Integer, default=0)
+        gender = Column(String(10), default="")
+        area = Column(String(100), default="")
+
+        exam_date = Column(String(50), default="")
+        exam_type = Column(String(50), default="常规体检")
+        hospital = Column(String(100), default="")
+        doctor = Column(String(50), default="")
+
+        height = Column(String(50), default="")
+        weight = Column(String(50), default="")
+        bmi = Column(String(50), default="")
+        blood_pressure = Column(String(50), default="")
+        blood_sugar = Column(String(50), default="")
+        blood_lipid = Column(String(50), default="")
+        heart_rate = Column(String(50), default="")
+        liver_function = Column(String(100), default="")
+        kidney_function = Column(String(100), default="")
+        ecg = Column(String(100), default="")
+        chest_ct = Column(String(100), default="")
+        bone_density = Column(String(100), default="")
+
+        conclusion = Column(Text, default="")
+        risk_level = Column(String(20), default="normal")
+        follow_advice = Column(Text, default="")
+        next_exam_date = Column(String(50), default="")
+        file_status = Column(String(20), default="completed")
+        remark = Column(Text, default="")
+# ==================== 4.1 告警中心表 ====================
+class AlarmRecord(Base):
+    __tablename__ = "alarm_records"
+    id = Column(Integer, primary_key=True, index=True)
+    level = Column(Integer)               # 1:紧急 2:重要 3:提醒
+    level_text = Column(String(20))       # 紧急/重要/提醒
+    elder_name = Column(String(50))       # 老人姓名
+    building = Column(String(50))         # 所属楼栋
+    room = Column(String(50))             # 房间号
+    device_code = Column(String(50))      # 设备编号
+    device_type = Column(String(50))      # 设备类型
+    content = Column(String(255))         # 告警内容
+    time = Column(String(50))             # 告警时间
+    duration = Column(String(50))         # 告警时长
+    status = Column(String(20), default="未处理") # 未处理/处理中/已处理/已忽略/已撤销/已派单
+    nurse = Column(String(50))            # 责任护理员
+    nurse_phone = Column(String(20))      # 护理员电话
+    is_timeout = Column(Integer, default=0) # 是否超时 (1是 0否)
+    is_read = Column(Integer, default=0)    # 是否已读 (1是 0否)
+    logs = Column(Text, default="[]")       # 操作日志 (存JSON字符串数组)

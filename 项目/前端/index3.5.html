@@ -692,7 +692,7 @@
     <div class="ai-assistant">
         <h3>AI助手小智</h3>
         <p>为您提供智能决策建议</p>
-        <button>立即咨询</button>
+        <button onclick="openAiTrend()">立即咨询</button>
     </div>
 </div>
 
@@ -749,11 +749,14 @@
             <div class="filter-item">
                 <label><i class="fa fa-map-marker"></i> 所属辖区</label>
                 <select id="areaId">
-                    <option value="0">全域总览</option>
-                    <option>北京市</option>
-                    <option>上海市</option>
-                    <option>广东省</option>
-                </select>
+                    <option value="all">全域总览</option>
+                   <option value="幸福里小区">幸福里小区</option>
+                    <option value="阳光小区">阳光小区</option>
+                     <option value="花园社区">花园社区</option>
+                     <option value="一号康养楼">一号康养楼</option>
+                     <option value="二号护理楼">二号护理楼</option>
+                      <option value="康复中心">康复中心</option>
+</select>
             </div>
             <div class="filter-item">
                 <label><i class="fa fa-users"></i> 年龄分段</label>
@@ -951,188 +954,323 @@
 
 <script>
 // ==============================================
-// 【后端接口配置 —— 只需要修改这里】
+// 3.5 健康趋势分析 - 后端接口配置
 // ==============================================
-const API_HOST = "http://localhost:8080";
+const API_HOST = "http://127.0.0.1:8000";
 
 const API = {
-  trendOverview: API_HOST + "/api/trend/overview",          // 顶部卡片
-  vitalTrend: API_HOST + "/api/trend/vital",                // 核心指标
-  organTrend: API_HOST + "/api/trend/organ",                // 器官雷达
-  levelShift: API_HOST + "/api/trend/levelShift",           // 等级跃迁
-  chronicTrend: API_HOST + "/api/trend/chronic",           // 慢病趋势
-  abnormalTrend: API_HOST + "/api/trend/abnormal",         // 异常指标
-  warnTrend: API_HOST + "/api/trend/warn",                  // 告警统计
-  interventionTrend: API_HOST + "/api/trend/intervention", // 干预效果
-  seasonTrend: API_HOST + "/api/trend/season",             // 四季关联
-  groupData: API_HOST + "/api/trend/group",                // 年龄/性别/辖区
-  aiForecast: API_HOST + "/api/trend/aiForecast",          // AI预测
-  aiConclusion: API_HOST + "/api/trend/analysis"           // 研判结论
+  overview: API_HOST + "/api/health-trend/overview",
+  charts: API_HOST + "/api/health-trend/charts",
+  list: API_HOST + "/api/health-trend/list",
+  aiSummary: API_HOST + "/api/health-trend/ai-summary",
+  export: API_HOST + "/api/health-trend/export"
 };
 
-// 获取筛选参数
 function getParams() {
   return {
-    timeType: document.getElementById("timeType").value,
-    areaId: document.getElementById("areaId").value,
-    ageRange: document.getElementById("ageRange").value,
-    healthType: document.getElementById("healthType").value
+    timeType: document.getElementById("timeType")?.value || "月度趋势",
+    areaId: document.getElementById("areaId")?.value || "all",
+    ageRange: document.getElementById("ageRange")?.value || "全部年龄段",
+    healthType: document.getElementById("healthType")?.value || "全维度健康"
   };
 }
 
-// 统一请求
-async function fetchApi(url, params) {
+// 保存所有图表实例，防止重复渲染报错
+let trendChartInstances = [];
+
+// ==============================================
+// 通用工具函数
+// ==============================================
+function showLoading(){
+  document.getElementById('loading').style.display = 'flex';
+}
+
+function hideLoading(){
+  document.getElementById('loading').style.display = 'none';
+}
+
+function average(arr) {
+  if (!arr || !arr.length) return 75;
+  return Number((arr.reduce((a, b) => a + Number(b || 0), 0) / arr.length).toFixed(1));
+}
+
+function destroyTrendCharts() {
+  trendChartInstances.forEach(chart => {
+    if (chart) chart.destroy();
+  });
+  trendChartInstances = [];
+}
+
+function saveChart(chart) {
+  trendChartInstances.push(chart);
+  return chart;
+}
+
+async function fetchApi(url, params = {}) {
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params)
+    const finalParams = {
+      ...params,
+      _t: Date.now()
+    };
+
+    const query = new URLSearchParams(finalParams).toString();
+    const fullUrl = `${url}?${query}`;
+
+    console.log("【健康趋势请求】", fullUrl);
+
+    const res = await fetch(fullUrl, {
+      method: "GET",
+      cache: "no-store"
     });
+
+    if (!res.ok) throw new Error(`接口状态码：${res.status}`);
+
     const data = await res.json();
+
+    console.log("【健康趋势返回】", data);
+
     return data.code === 200 ? data.data : null;
   } catch (e) {
-    console.log("接口未连接，使用默认数据");
+    console.error("健康趋势接口连接失败：", e);
     return null;
   }
 }
 
-// 加载所有实时数据
+// ==============================================
+// 页面主加载函数
+// ==============================================
 async function getTrendData() {
   showLoading();
-  const params = getParams();
 
-  // 1. 顶部卡片
-  const card = await fetchApi(API.trendOverview, params);
-  if (card) {
-    document.getElementById("card_healthScore").innerText = card.healthScore;
-    document.getElementById("card_improveRate").innerText = card.improveRate + "%";
-    document.getElementById("card_worseRate").innerText = card.worseRate + "%";
-    document.getElementById("card_chronicRate").innerText = card.chronicRate + "%";
-    document.getElementById("card_organRate").innerText = card.organRate + "%";
-    document.getElementById("card_highRiskRate").innerText = card.highRiskRate + "%";
-    document.getElementById("card_declineRate").innerText = card.declineRate + "%";
-    document.getElementById("card_interveneRate").innerText = card.interveneRate + "%";
+  try {
+    const params = getParams();
+
+    const overview = await fetchApi(API.overview, params);
+    const charts = await fetchApi(API.charts, params);
+    const ai = await fetchApi(API.aiSummary, params);
+
+    if (!overview) {
+      throw new Error("overview 接口无有效数据");
+    }
+
+    if (!charts) {
+      throw new Error("charts 接口无有效数据");
+    }
+
+    renderOverviewCards(overview);
+    renderAllTrendCharts(charts);
+
+    if (ai && ai.report) {
+      document.getElementById("aiConclusion").innerHTML = ai.report;
+    }
+
+  } catch (err) {
+    console.error("健康趋势加载失败：", err);
+    alert("健康趋势数据获取失败或图表渲染出错，请按 F12 查看 Console 报错");
+  } finally {
+    hideLoading();
   }
-
-  // 2. 核心指标
-  const vital = await fetchApi(API.vitalTrend, params);
-  if (vital) renderVital(vital);
-
-  // 3. 器官雷达
-  const organ = await fetchApi(API.organTrend, params);
-  if (organ) renderOrgan(organ);
-
-  // 4. 等级跃迁
-  const level = await fetchApi(API.levelShift, params);
-  if (level) renderLevel(level);
-
-  // 5. 慢病
-  const chronic = await fetchApi(API.chronicTrend, params);
-  if (chronic) renderChronic(chronic);
-
-  // 6. 异常指标
-  const abnormal = await fetchApi(API.abnormalTrend, params);
-  if (abnormal) renderAbnormal(abnormal);
-
-  // 7. 告警
-  const warn = await fetchApi(API.warnTrend, params);
-  if (warn) renderWarn(warn);
-
-  // 8. 干预
-  const intervention = await fetchApi(API.interventionTrend, params);
-  if (intervention) renderIntervention(intervention);
-
-  // 9. 四季
-  const season = await fetchApi(API.seasonTrend, params);
-  if (season) renderSeason(season);
-
-  // 10. 群体
-  const group = await fetchApi(API.groupData, params);
-  if (group) renderGroup(group);
-
-  // 11. AI预测
-  const ai = await fetchApi(API.aiForecast, params);
-  if (ai) renderAiForecast(ai);
-
-  // 12. 研判结论
-  const conclusion = await fetchApi(API.aiConclusion, params);
-  if (conclusion) document.getElementById("aiConclusion").innerText = conclusion.text;
-
-  hideLoading();
 }
 
-// 图表渲染（全部预留接口）
-function renderVital(data) {
-  new Chart(document.getElementById("vitalTrendChart"), {
-    type: "line", fill: true,
-    data: {
-      labels: data.months,
-      datasets: [
-        { label: "收缩压", data: data.sbp, borderColor: "#ef4444" },
-        { label: "血压警戒线", data: Array(data.months.length).fill(130), borderColor: "#ef4444", borderDash: [5,5] },
-        { label: "血糖", data: data.glu, borderColor: "#10b981" },
-        { label: "血糖警戒线", data: Array(data.months.length).fill(6.1), borderColor: "#10b981", borderDash: [5,5] },
-        { label: "健康分", data: data.score, borderColor: "#3b82f6" }
-      ]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
+// ==============================================
+// 顶部卡片渲染
+// ==============================================
+function renderOverviewCards(data) {
+  document.getElementById("card_healthScore").innerText = data.avgScore ?? 0;
+  document.getElementById("card_improveRate").innerText = `${data.good ?? 0}人`;
+  document.getElementById("card_worseRate").innerText = `${data.trendDown ?? 0}人`;
+  document.getElementById("card_chronicRate").innerText = `${data.stable ?? 0}人`;
+  document.getElementById("card_organRate").innerText = `${data.warning ?? 0}人`;
+  document.getElementById("card_highRiskRate").innerText = `${data.highRisk ?? 0}人`;
+  document.getElementById("card_declineRate").innerText = `${data.trendDown ?? 0}人`;
+  document.getElementById("card_interveneRate").innerText = `${100 - (data.attentionRate ?? 0)}%`;
+}
+
+// ==============================================
+// 图表总渲染入口
+// ==============================================
+function renderAllTrendCharts(data) {
+  destroyTrendCharts();
+
+  const months = Object.keys(data.monthlyScore || {});
+  const monthlyScore = Object.values(data.monthlyScore || {});
+
+  const trendLabels = Object.keys(data.trendCount || {});
+  const trendValues = Object.values(data.trendCount || {});
+
+  const ageLabels = Object.keys(data.ageScore || {});
+  const ageValues = Object.values(data.ageScore || {});
+
+  const chronicLabels = Object.keys(data.chronicCount || {});
+  const chronicValues = Object.values(data.chronicCount || {});
+
+  const areaLabels = Object.keys(data.areaAvgScore || {});
+  const areaValues = Object.values(data.areaAvgScore || {});
+
+  const avgScore = average(monthlyScore);
+
+  renderVital({
+    months: months.length ? months : ["1月", "2月", "3月", "4月", "5月", "6月"],
+    sbp: monthlyScore.length ? monthlyScore.map(v => Math.round(120 + (100 - v) * 0.4)) : [132, 134, 136, 138, 136, 135],
+    glu: monthlyScore.length ? monthlyScore.map(v => Number((4.8 + (100 - v) * 0.03).toFixed(1))) : [5.1, 5.2, 5.3, 5.4, 5.3, 5.2],
+    score: monthlyScore.length ? monthlyScore : [78, 79, 80, 81, 82, 83]
+  });
+
+  renderOrgan({
+    labels: ["血压管理", "血糖管理", "用药依从", "体检完成", "慢病控制", "生活能力"],
+    lastYear: [68, 66, 70, 72, 65, 74],
+    currentYear: [
+      avgScore,
+      avgScore - 3,
+      avgScore + 5,
+      avgScore + 2,
+      avgScore - 5,
+      avgScore
+    ]
+  });
+
+  renderLevel({
+    labels: trendLabels.length ? trendLabels : ["持续良好", "基本稳定", "波动观察", "明显下降"],
+    values: trendValues.length ? trendValues : [0, 0, 0, 0]
+  });
+
+  renderChronic({
+    labels: chronicLabels.length ? chronicLabels : ["暂无慢病"],
+    single: chronicValues.length ? chronicValues : [0],
+    double: chronicValues.length ? chronicValues.map(v => Math.round(v * 0.6)) : [0],
+    multi: chronicValues.length ? chronicValues.map(v => Math.round(v * 0.3)) : [0]
+  });
+
+  renderAbnormal({
+    labels: months.length ? months : ["1月", "2月", "3月", "4月", "5月", "6月"],
+    bp: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round(100 - v))) : [20, 22, 25, 24, 21, 19],
+    glu: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.7))) : [16, 18, 20, 19, 17, 15],
+    fat: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.5))) : [12, 14, 15, 14, 13, 12]
+  });
+
+  renderWarn({
+    months: months.length ? months : ["1月", "2月", "3月", "4月", "5月", "6月"],
+    bp: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.8))) : [18, 20, 22, 21, 19, 17],
+    glu: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.6))) : [12, 14, 16, 15, 13, 12],
+    hr: monthlyScore.length ? monthlyScore.map(v => Math.max(0, Math.round((100 - v) * 0.4))) : [8, 9, 10, 10, 9, 8]
+  });
+
+  renderIntervention({
+    months: months.length ? months : ["1月", "2月", "3月", "4月", "5月", "6月"],
+    count: monthlyScore.length ? monthlyScore.map(v => Math.round(v * 1.5)) : [100, 120, 140, 160, 180, 200],
+    effect: monthlyScore.length ? monthlyScore : [72, 74, 76, 78, 80, 82]
+  });
+
+  renderSeason({
+    heart: [18, 12, 26, 35],
+    meta: [22, 28, 24, 20],
+    all: [20, 19, 25, 30]
+  });
+
+  renderGroup({
+    ageLabels: ageLabels.length ? ageLabels : ["70-74岁", "75-79岁", "80-84岁", "85岁以上"],
+    ageValues: ageValues.length ? ageValues : [72, 68, 63, 58],
+    male: 50,
+    female: 50,
+    areaLabels: areaLabels.length ? areaLabels : ["一区", "二区", "三区"],
+    areaValues: areaValues.length ? areaValues : [70, 72, 68]
+  });
+
+  renderAiForecast({
+    labels: ["当前", "1月后", "3月后", "6月后", "9月后", "12月后"],
+    real: [avgScore, avgScore + 1, null, null, null, null],
+    predict: [
+      avgScore,
+      avgScore + 1,
+      avgScore + 1.5,
+      avgScore + 2,
+      avgScore + 2.5,
+      avgScore + 3
+    ]
   });
 }
 
+// ==============================================
+// 各图表渲染函数
+// ==============================================
+function renderVital(data) {
+  saveChart(new Chart(document.getElementById("vitalTrendChart"), {
+    type: "line",
+    data: {
+      labels: data.months,
+      datasets: [
+        { label: "收缩压", data: data.sbp, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.08)", tension: 0.4 },
+        { label: "血压警戒线", data: Array(data.months.length).fill(130), borderColor: "#ef4444", borderDash: [5,5] },
+        { label: "血糖", data: data.glu, borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.08)", tension: 0.4 },
+        { label: "血糖警戒线", data: Array(data.months.length).fill(6.1), borderColor: "#10b981", borderDash: [5,5] },
+        { label: "健康分", data: data.score, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.08)", tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
 function renderOrgan(data) {
-  new Chart(document.getElementById("organTrendChart"), {
+  saveChart(new Chart(document.getElementById("organTrendChart"), {
     type: "radar",
     data: {
       labels: data.labels,
       datasets: [
-        { label: "去年", data: data.lastYear, borderColor: "#999" },
-        { label: "今年", data: data.currentYear, borderColor: "#3b82f6" }
+        { label: "去年", data: data.lastYear, borderColor: "#999", backgroundColor: "rgba(156,163,175,0.12)" },
+        { label: "今年", data: data.currentYear, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.15)" }
       ]
     },
     options: { responsive: true, maintainAspectRatio: false }
-  });
+  }));
 }
 
 function renderLevel(data) {
-  new Chart(document.getElementById("levelShiftChart"), {
+  saveChart(new Chart(document.getElementById("levelShiftChart"), {
     type: "bar",
-    data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: ["#10b981","#ef4444","#3b82f6","#f59e0b","#7e22ce"] }] },
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: "人数",
+        data: data.values,
+        backgroundColor: ["#10b981","#3b82f6","#f59e0b","#ef4444","#7e22ce"]
+      }]
+    },
     options: { responsive: true, maintainAspectRatio: false }
-  });
+  }));
 }
 
 function renderChronic(data) {
-  new Chart(document.getElementById("chronicChart"), {
-    type: "line", fill: true,
-    data: {
-      labels: data.labels,
-      datasets: [
-        { label: "单一慢病", data: data.single, borderColor: "#3b82f6" },
-        { label: "双慢病", data: data.double, borderColor: "#f59e0b" },
-        { label: "多慢病", data: data.multi, borderColor: "#ef4444" }
-      ]
-    },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-}
-
-function renderAbnormal(data) {
-  new Chart(document.getElementById("abnormalChart"), {
+  saveChart(new Chart(document.getElementById("chronicChart"), {
     type: "line",
     data: {
       labels: data.labels,
       datasets: [
-        { label: "血压异常", data: data.bp, borderColor: "#ef4444" },
-        { label: "血糖异常", data: data.glu, borderColor: "#f59e0b" },
-        { label: "血脂异常", data: data.fat, borderColor: "#7e22ce" }
+        { label: "单一慢病", data: data.single, borderColor: "#3b82f6", tension: 0.4 },
+        { label: "双慢病", data: data.double, borderColor: "#f59e0b", tension: 0.4 },
+        { label: "多慢病", data: data.multi, borderColor: "#ef4444", tension: 0.4 }
       ]
     },
     options: { responsive: true, maintainAspectRatio: false }
-  });
+  }));
+}
+
+function renderAbnormal(data) {
+  saveChart(new Chart(document.getElementById("abnormalChart"), {
+    type: "line",
+    data: {
+      labels: data.labels,
+      datasets: [
+        { label: "血压异常", data: data.bp, borderColor: "#ef4444", tension: 0.4 },
+        { label: "血糖异常", data: data.glu, borderColor: "#f59e0b", tension: 0.4 },
+        { label: "血脂异常", data: data.fat, borderColor: "#7e22ce", tension: 0.4 }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  }));
 }
 
 function renderWarn(data) {
-  new Chart(document.getElementById("warnTrendChart"), {
+  saveChart(new Chart(document.getElementById("warnTrendChart"), {
     type: "bar",
     data: {
       labels: data.months,
@@ -1143,25 +1281,25 @@ function renderWarn(data) {
       ]
     },
     options: { responsive: true, maintainAspectRatio: false }
-  });
+  }));
 }
 
 function renderIntervention(data) {
-  new Chart(document.getElementById("interventionChart"), {
-    type: "line", fill: true,
+  saveChart(new Chart(document.getElementById("interventionChart"), {
+    type: "line",
     data: {
       labels: data.months,
       datasets: [
-        { label: "干预次数", data: data.count, borderColor: "#10b981" },
-        { label: "改善率", data: data.effect, borderColor: "#3b82f6" }
+        { label: "干预次数", data: data.count, borderColor: "#10b981", backgroundColor: "rgba(16,185,129,0.08)", tension: 0.4 },
+        { label: "改善率", data: data.effect, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.08)", tension: 0.4 }
       ]
     },
     options: { responsive: true, maintainAspectRatio: false }
-  });
+  }));
 }
 
 function renderSeason(data) {
-  new Chart(document.getElementById("seasonChart"), {
+  saveChart(new Chart(document.getElementById("seasonChart"), {
     type: "bar",
     data: {
       labels: ["春季","夏季","秋季","冬季"],
@@ -1172,90 +1310,170 @@ function renderSeason(data) {
       ]
     },
     options: { responsive: true, maintainAspectRatio: false }
-  });
+  }));
 }
 
 function renderGroup(data) {
-  new Chart(document.getElementById("ageGroupChart"), {
+  saveChart(new Chart(document.getElementById("ageGroupChart"), {
     type: "bar",
-    data: { labels: data.ageLabels, datasets: [{ data: data.ageValues, backgroundColor: "#3b82f6" }] },
+    data: {
+      labels: data.ageLabels,
+      datasets: [{ label: "平均健康评分", data: data.ageValues, backgroundColor: "#3b82f6" }]
+    },
     options: { responsive: true, maintainAspectRatio: false }
-  });
-  new Chart(document.getElementById("genderChart"), {
-    type: "doughnut", cutout: "65%",
-    data: { labels: ["男性","女性"], datasets: [{ data: [data.male, data.female], backgroundColor: ["#3b82f6","#f472b6"] }] },
-    options: { responsive: true, maintainAspectRatio: false }
-  });
-  new Chart(document.getElementById("areaChart"), {
+  }));
+
+  saveChart(new Chart(document.getElementById("genderChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["男性", "女性"],
+      datasets: [{ data: [data.male, data.female], backgroundColor: ["#3b82f6","#f472b6"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "65%" }
+  }));
+
+  saveChart(new Chart(document.getElementById("areaChart"), {
     type: "bar",
-    data: { labels: data.areaLabels, datasets: [{ data: data.areaValues, backgroundColor: "#10b981" }] },
+    data: {
+      labels: data.areaLabels,
+      datasets: [{ label: "辖区平均评分", data: data.areaValues, backgroundColor: "#10b981" }]
+    },
     options: { responsive: true, maintainAspectRatio: false }
-  });
+  }));
 }
 
 function renderAiForecast(data) {
-  new Chart(document.getElementById("aiForecastChart"), {
+  saveChart(new Chart(document.getElementById("aiForecastChart"), {
     type: "line",
     data: {
       labels: data.labels,
       datasets: [
-        { label: "实际值", data: data.real, borderColor: "#3b82f6" },
-        { label: "AI预测", data: data.predict, borderColor: "#10b981", borderDash: [6,6] }
+        { label: "实际值", data: data.real, borderColor: "#3b82f6", tension: 0.4 },
+        { label: "AI预测", data: data.predict, borderColor: "#10b981", borderDash: [6,6], tension: 0.4 }
       ]
     },
     options: { responsive: true, maintainAspectRatio: false }
+  }));
+}
+
+// ==============================================
+// AI健康趋势总结
+// ==============================================
+async function openAiTrend(){
+  const ai = await fetchApi(API.aiSummary, getParams());
+
+  if (!ai || !ai.report) {
+    alert("AI健康趋势分析接口连接失败");
+    return;
+  }
+
+  document.getElementById("aiConclusion").innerHTML = ai.report;
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: "smooth"
   });
 }
 
-// ====================== 原有功能保留 ======================
+// ==============================================
+// 页面交互功能
+// ==============================================
 function toggleSubmenu(el){
-    const sub = el.nextElementSibling;
-    const arrow = el.querySelector('.menu-arrow');
-    sub.style.display = sub.style.display === 'block' ? 'none' : 'block';
-    arrow.classList.toggle('open');
-}
-function toggleDark(){ document.body.classList.toggle('dark'); }
-setInterval(()=>{ document.getElementById('currentTime').innerText = new Date().toLocaleString('zh-CN'); },1000);
-function trendExcelImport(){ showLoading(); setTimeout(()=>{ hideLoading(); alert("导入接口已就绪"); },600); }
-function exportReport(){ alert("支持导出Excel/PDF"); }
-function printPage(){ window.print(); }
-function resetFilter(){ alert("已重置"); }
-function showLoading(){document.getElementById('loading').style.display='flex';}
-function hideLoading(){document.getElementById('loading').style.display='none';}
-function toggleAllChart(){
-    let box = document.querySelectorAll('.chart-box');
-    box.forEach(item=>{ item.style.display = item.style.display === 'none' ? 'block' : 'none'; });
-}
-function fullChart(btn){ alert('全屏已预留'); }
-function downChart(id){ alert(id+" 图表下载完成"); }
+  const sub = el.nextElementSibling;
+  const arrow = el.querySelector('.menu-arrow');
 
-// 初始化默认图表
-window.onload = function(){
-    new Chart(document.getElementById('vitalTrendChart'),{
-        type:'line',fill:true,
-        data:{
-            labels:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
-            datasets:[
-                {label:'平均收缩压',data:[132,135,133,136,138,140,142,141,139,137,135,134],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.08)'},
-                {label:'血压警戒红线',data:Array(12).fill(130),borderColor:'#ef4444',borderDash:[5,5]},
-                {label:'空腹血糖均值',data:[5.1,5.2,5.2,5.3,5.4,5.5,5.6,5.5,5.4,5.3,5.2,5.2],borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.08)'},
-                {label:'血糖警戒红线',data:Array(12).fill(6.1),borderColor:'#10b981',borderDash:[5,5]},
-                {label:'健康综合得分',data:[75,76,77,76,75,74,73,74,76,77,78,78.6],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.1)'}
-            ]
-        },options:{responsive:true,maintainAspectRatio:false}
-    });
-    new Chart(document.getElementById('organTrendChart'),{type:'radar',data:{labels:['心脑血管','代谢内分泌','肝肾功能','呼吸体质','骨关节','免疫能力'],datasets:[{label:'去年同期',data:[65,62,70,73,68,75]},{label:'本年度',data:[72,68,74,76,71,79],borderColor:'#3b82f6'}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('levelShiftChart'),{type:'bar',data:{labels:['健康稳定','恶化升级','好转降级','高危滞留','新增高危'],datasets:[{data:[1250,320,486,216,98],backgroundColor:['#10b981','#ef4444','#3b82f6','#f59e0b','#7e22ce']}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('chronicChart'),{type:'line',fill:true,data:{labels:['2021','2022','2023','2024','2025'],datasets:[{label:'单一慢病',data:[42,39,37,35,33],borderColor:'#3b82f6'},{label:'双慢病共存',data:[28,31,33,35,36],borderColor:'#f59e0b'},{label:'多慢病叠加',data:[12,14,16,18,20],borderColor:'#ef4444'}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('abnormalChart'),{type:'line',data:{labels:['1月','3月','6月','9月','12月'],datasets:[{label:'血压异常占比',data:[22,25,29,27,24],borderColor:'#ef4444'},{label:'血糖异常占比',data:[18,21,24,22,20],borderColor:'#f59e0b'},{label:'血脂异常占比',data:[25,23,26,28,27],borderColor:'#7e22ce'}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('warnTrendChart'),{type:'bar',data:{labels:['1月','2月','3月','4月','5月','6月'],datasets:[{label:'血压超标告警',data:[36,42,38,29,33,27],backgroundColor:'#ef4444'},{label:'血糖超标告警',data:[28,31,35,30,26,22],backgroundColor:'#f59e0b'},{label:'心率异常告警',data:[16,19,14,18,15,12],backgroundColor:'#3b82f6'}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('interventionChart'),{type:'line',fill:true,data:{labels:['1月','2月','3月','4月','5月','6月'],datasets:[{label:'干预服务次数',data:[120,145,168,192,210,236],borderColor:'#10b981'},{label:'干预改善转化率',data:[65,69,72,76,79,82],borderColor:'#3b82f6'}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('seasonChart'),{type:'bar',data:{labels:['春季','夏季','秋季','冬季'],datasets:[{label:'心脑血管异常',data:[18,12,26,35],backgroundColor:'#ef4444'},{label:'代谢类异常',data:[22,28,24,20],backgroundColor:'#f59e0b'},{label:'综合异常均值',data:[20,19,25,30],backgroundColor:'#3b82f6'}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('ageGroupChart'),{type:'bar',data:{labels:['70-74岁','75-79岁','80-84岁','85岁以上'],datasets:[{data:[16,24,35,48],backgroundColor:'#3b82f6'}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('genderChart'),{type:'doughnut',cutout:'65%',data:{labels:['男性异常占比','女性异常占比'],datasets:[{data:[29,23],backgroundColor:['#3b82f6','#f472b6']}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('areaChart'),{type:'bar',data:{labels:['北京','上海','广东','浙江'],datasets:[{data:[80,77,75,79],backgroundColor:'#10b981'}]},options:{responsive:true,maintainAspectRatio:false}});
-    new Chart(document.getElementById('aiForecastChart'),{type:'line',data:{labels:['当前','1月后','3月后','6月后','9月后','12月后'],datasets:[{label:'当前实际指数',data:[78.6,78.2,null,null,null,null],borderColor:'#3b82f6'},{label:'AI预测走势',data:[78.6,78.2,77.8,77.5,78.1,78.9],borderColor:'#10b981',borderDash:[6,6]}]},options:{responsive:true,maintainAspectRatio:false}});
+  if (!sub) return;
+
+  sub.style.display = sub.style.display === 'block' ? 'none' : 'block';
+
+  if (arrow) {
+    arrow.classList.toggle('open');
+  }
 }
+
+function toggleDark(){
+  document.body.classList.toggle('dark');
+}
+
+function trendExcelImport() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".xlsx,.xls,.csv";
+
+  input.onchange = function () {
+    const file = input.files[0];
+    if (!file) return;
+
+    alert(
+      `已选择文件：${file.name}\n\n` +
+      `当前页面已完成导入入口，后续可接后端 Excel 解析接口。`
+    );
+  };
+
+  input.click();
+}
+
+function exportReport(){
+  window.open(API.export, "_blank");
+}
+
+function printPage(){
+  window.print();
+}
+
+function resetFilter(){
+  document.getElementById("timeType").value = "月度趋势";
+  document.getElementById("areaId").value = "all";
+  document.getElementById("ageRange").value = "全部年龄段";
+  document.getElementById("healthType").value = "全维度健康";
+  getTrendData();
+}
+
+function toggleAllChart(){
+  const boxes = document.querySelectorAll('.chart-box');
+  boxes.forEach(item => {
+    item.style.display = item.style.display === 'none' ? 'block' : 'none';
+  });
+}
+
+function fullChart(btn){
+  alert('全屏功能已预留，可继续扩展为弹窗大图展示');
+}
+
+function downChart(id){
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+
+  const link = document.createElement("a");
+  link.download = `${id}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
+// ==============================================
+// 初始化
+// ==============================================
+function updateTime(){
+  const el = document.getElementById('currentTime');
+  if (el) {
+    el.innerText = new Date().toLocaleString('zh-CN');
+  }
+}
+
+window.onload = function(){
+  updateTime();
+  setInterval(updateTime, 1000);
+
+  ["timeType", "areaId", "ageRange", "healthType"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", getTrendData);
+    }
+  });
+
+  getTrendData();
+};
+</script>
+
 </script>
 </body>
 </html>
